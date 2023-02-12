@@ -1,0 +1,24 @@
+---
+- hosts: hosts
+  remote_user: jooseppa
+  gather_facts: true
+  tasks:
+
+    - debug: var=ansible_default_ipv4.address
+
+    #regex will get only numbers
+    - name: Curl ip address to get target port
+      shell: curl http://{{ ansible_default_ipv4.address }}:80
+      register: curl_result
+    - set_fact:
+        remote_port={{ curl_result.stdout | regex_search('\d+') }}
+
+    - name: The target port is
+      debug: var=remote_port
+
+    - name: Post your username to lab server
+      shell: echo {{ ansible_ssh_user }} | nc localhost {{ remote_port }}
+      register: echo_result
+
+    - name: What happened with posting your name to server
+      debug: var=echo_result

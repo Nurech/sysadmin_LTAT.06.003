@@ -1,0 +1,5 @@
+ssh jooseppa@lab1.cloud.ut.ee
+7. ifconfig
+7. curl http://172.17.67.39:80
+8. nmap -sV -p 31222 172.17.67.39
+9. echo jooseppa | nc localhost 31222

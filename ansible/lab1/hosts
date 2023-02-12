@@ -1,0 +1,13 @@
+[hosts]
+lab1.cloud.ut.ee
+
+[all:vars]
+ansible_user=jooseppa
+
+ansible_ssh_pass="{{ lookup('file', '../pass.txt') }}"
+ansible_ssh_user=jooseppa
+
+ansible_become_user=root
+ansible_become=true
+ansible_become_method=enable
+ansible_become_password="{{ lookup('file', '../pass.txt') }}"
