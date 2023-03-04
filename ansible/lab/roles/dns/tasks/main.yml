@@ -1,0 +1,418 @@
+
+- name: (pre - optional) Get OpenStack metadata
+  uri:
+    url: http://169.254.169.254/latest/meta-data/public-ipv4
+    method: GET
+    status_code: 200
+    return_content: yes
+  register: cloud_metadata
+- set_fact:
+    external_ip: "{{ cloud_metadata.content }}"
+    quad_1: "{{ cloud_metadata.content.split('.')[0] }}"
+    quad_2: "{{ cloud_metadata.content.split('.')[1] }}"
+    quad_3: "{{ cloud_metadata.content.split('.')[2] }}"
+    quad_4: "{{ cloud_metadata.content.split('.')[3] }}"
+
+- name: (pre - optional) Print IP address
+  debug: var=cloud_metadata.content
+
+
+- name: (pre - optional) DNS | Autoremove unneeded packages installed as dependencies
+  dnf:
+    autoremove: yes
+
+#1 Additionally - Securing your ssh server
+- name: 1. Edit sshd_config
+  become: true
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: '^PasswordAuthentication'
+    line: 'PasswordAuthentication no'
+
+- name: 1. Restart sshd service
+  become: true
+  service:
+    name: sshd
+    state: restarted
+
+#2. Check for the updates using CentOS package manager
+- name: 2. sudo dnf check-update -y
+  ansible.builtin.raw: sudo dnf check-update -y
+
+- name: 2. sudo dnf update -y
+  ansible.builtin.raw: sudo dnf update -y
+
+- name: 2. Reboot the server
+  tags: reboot
+  become: yes
+  become_user: root
+  shell: "sleep 2 && reboot"
+  async: 1
+  poll: 0
+
+- name: 2. Wait for the reboot to complete
+  wait_for_connection:
+    connect_timeout: 120
+    sleep: 5
+    delay: 10
+    timeout: 300
+
+- name: 2. Wait for server to be back up
+  shell: "uptime"
+  register: Uptime
+
+- debug: var=Uptime
+#
+- name: 2. dnf autoremove -y
+  ansible.builtin.raw: dnf autoremove -y
+
+- name: 2. dnf clean all
+  ansible.builtin.raw: dnf clean all
+
+#3. Firewall - Open UDP and TCP port 53 for the lab
+- name: 3. Add DNS Service to Firewall
+  firewalld:
+    service: dns
+    permanent: yes
+    state: enabled
+
+- name: 3. Enable Firewall
+  firewalld:
+    state: enabled
+
+- name: 3. Add port to firewalld
+  firewalld:
+    zone: public
+    port: "{{ item }}"
+    permanent: yes
+    state: enabled
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+  loop:
+    - 8301/tcp
+    - 53/tcp
+    - 8301/udp
+    - 53/udp
+  notify:
+    - Restart firewalld
+
+- name: 3. Reload service firewalld
+  systemd:
+    name: firewalld
+    state: reloaded
+
+
+#4. Disable IPv6¶
+- name: 4. Disable IPv6
+  copy:
+    src: 70-ipv6.conf
+    dest: /etc/sysctl.d/70-ipv6.conf
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: 4. Change net.ipv6.conf.default.disable_ipv6 to 1.
+  sysctl:
+    name: net.ipv6.conf.default.disable_ipv6
+    value: '1'
+    sysctl_file: /etc/sysctl.d/70-ipv6.conf
+    reload: yes
+
+- name: 4. Change net.ipv6.conf.all.disable_ipv6 to 1.
+  sysctl:
+    name: net.ipv6.conf.all.disable_ipv6
+    value: '1'
+    sysctl_file: /etc/sysctl.d/70-ipv6.conf
+    reload: yes
+
+- name: 4. Inserts into hostname
+  template:
+    src: hostname.j2
+    dest: /etc/hostname
+    owner: root
+    group: root
+    mode: 0777
+
+#5 Domain Name System (DNS) using BIND software
+- name: 5. Inserts into hosts
+  template:
+    src: hosts.j2
+    dest: /etc/hosts
+    owner: root
+    group: root
+    mode: 0777
+
+#6 Configuring the BIND Name Server¶
+- name: 6. Install bind and bind-utils on CentOS
+  yum:
+    name:
+      - bind
+      - bind-utils
+    state: present
+  become: true
+
+
+- name: 6. Create log directory
+  file:
+    path: /var/named/log
+    state: directory
+    owner: named
+    group: named
+    mode: 0755
+    modification_time: preserve
+    access_time: preserve
+
+- name: 6. Create default log file
+  file:
+    path: /var/named/log/default
+    state: touch
+    owner: named
+    group: named
+    mode: 0755
+    modification_time: preserve
+    access_time: preserve
+
+- name: 6. Create auth_servers log file
+  file:
+    path: /var/named/log/auth_servers
+    state: touch
+    owner: named
+    group: named
+    mode: 0755
+    modification_time: preserve
+    access_time: preserve
+
+- name: 6. Create zone_transfers log file
+  file:
+    path: /var/named/log/zone_transfers
+    state: touch
+    owner: named
+    group: named
+    mode: 0755
+    modification_time: preserve
+    access_time: preserve
+
+- name: 6. Create client_security log file
+  file:
+    path: /var/named/log/client_security
+    state: touch
+    owner: named
+    group: named
+    mode: 0755
+    modification_time: preserve
+    access_time: preserve
+
+- name: 6. Create queries log file
+  file:
+    path: /var/named/log/queries
+    state: touch
+    owner: named
+    group: named
+    mode: 0755
+    modification_time: preserve
+    access_time: preserve
+
+- name: 6. Create query-errors log file
+  file:
+    path: /var/named/log/query-errors
+    state: touch
+    owner: named
+    group: named
+    mode: 0755
+    modification_time: preserve
+    access_time: preserve
+
+- name: 6. Set permission on named.conf
+  file:
+    path: /etc/named.conf
+    owner: named
+    group: named
+    mode: 0644
+    modification_time: preserve
+    access_time: preserve
+
+- name: 6. Set read permission on named.conf
+  file:
+    path: /etc/named.conf
+    owner: named
+    group: named
+    mode: 0644
+
+# let ansible manage this file
+- name: 6. Ensure /etc/named.conf settings are exactly as needed
+  become: true
+  ansible.builtin.copy:
+    src: '../files/named.conf'
+    dest:  /etc/named.conf
+    owner: named
+    group: named
+    mode: 0644
+
+# let ansible manage this file
+- name: 6. Ensure /etc/resolve.conf settings are exactly as needed
+  become: true
+  block:
+    - name: 6. Clear previous /etc/resolve.conf file data
+      lineinfile:
+        path: /etc/resolve.conf
+        regexp: '^[\s\S]*'
+        state: absent
+    - name: 6. new /etc/resolve.conf file content
+      lineinfile:
+        path: /etc/resolve.conf
+        regexp: '^[\s\S]*'
+        line: |
+          nameserver 127.0.0.1
+
+- name: 6. Verify named-checkconf settings are valid
+  become: true
+  block:
+    - name: named-checkconf
+      ansible.builtin.raw: named-checkconf /etc/named.conf
+      register: results
+    - debug:
+        var: results.stdout
+
+- name: 6. Start the name server (service named)
+  become: true
+  block:
+    - name: 6. stop systemctl
+      ansible.builtin.raw: systemctl stop named
+    - name: 6. start systemctl
+      ansible.builtin.raw: systemctl start named
+
+- name: 6. Print dig
+  block:
+    - name: 6. dig @127.0.0.1 courses.cs.ut.ee
+      ansible.builtin.raw: dig @127.0.0.1 courses.cs.ut.ee
+      register: results
+    - debug: var=results.stdout_lines
+    - name: 6. dig @127.0.0.1 www.google.com
+      ansible.builtin.raw: dig @127.0.0.1 www.google.com
+      register: results
+    - debug: var=results.stdout_lines
+
+- name: 6. Enable auto-starting the named
+  ansible.builtin.raw: systemctl enable named
+
+- name: 6. Should resolve www.google.com and start pinging it.
+  block:
+    - name: ping test
+      shell: ping -c 5 www.google.com
+      ignore_errors: true
+      register: result
+      async: 20
+      poll: 1
+    - debug: var=result.stdout_lines
+
+
+- name: 6. Create regular file zone
+  file:
+    path: /etc/named/{{ hostname }}.{{ domain_name }}
+    state: touch
+    owner: root
+    group: root
+    mode: 0777
+
+- name: Add local zone to named.conf
+  ansible.builtin.blockinfile:
+    path: /etc/named.conf
+    marker: "// local zone ANSIBLE MANAGED BLOCK"
+    block: |
+      zone "{{ hostname }}.{{ domain_name }}" IN {
+              notify explicit;
+              type master;
+              file "/etc/named/{{ hostname }}.{{ domain_name }}";
+              allow-update { none; };
+      };
+
+- name: 6. Edit regular zone file
+  become: true
+  block:
+    - name: 6. Clear previous zone file data
+      lineinfile:
+        path: /etc/named/{{ hostname }}.{{ domain_name }}
+        regexp: '^[\s\S]*'
+        state: absent
+    - name: 6. new zone file content
+      lineinfile:
+        path: /etc/named/{{ hostname }}.{{ domain_name }}
+        regexp: '^[\s\S]*'
+        line: |
+          ;
+          ; BIND data file for local zone {{ hostname }}.{{ domain_name }};
+          $TTL    15M
+          $ORIGIN {{ hostname }}.{{ domain_name }}.
+          @       IN      SOA    ns1.{{ hostname }}.{{ domain_name }}. root.{{ hostname }}.{{ domain_name }}. (
+                {{ ansible_date_time.epoch | int }} ; Serial
+                15M ; Refresh
+                5M ; Retry
+                120M ; Expire
+                600 ) ; Negative Cache TTL
+          @              IN      NS      ns1
+          @              IN      A       {{ external_ip }}
+          ns1            IN      A       {{ external_ip }}
+          {{ hostname }}         IN      A       {{ external_ip }}
+
+- name: Check local zone file is valid
+  become: true
+  command: named-checkzone {{ hostname }}.{{ domain_name }} /etc/named/{{ hostname }}.{{ domain_name }}
+  register: result
+- debug:
+    var: result.stdout_lines
+
+
+- name: 6. Create arpa file zone
+  file:
+    path: /etc/named/reverse.{{ hostname }}.{{ domain_name }}
+    state: touch
+    owner: root
+    group: root
+    mode: 0777
+
+- name: Add zone arpa to named.conf
+  ansible.builtin.blockinfile:
+    path: /etc/named.conf
+    marker: "// arpa zone ANSIBLE MANAGED BLOCK"
+    block: |
+      zone "{{ quad_3 }}.{{ quad_2 }}.{{ quad_1 }}.in-addr.arpa" IN {
+      	type master;
+      	file "/etc/named/reverse.{{ hostname }}.{{ domain_name }}";
+      	allow-update { none; };
+      };
+
+- name: 6. Edit arpa zone file
+  become: true
+  block:
+    - name: 6. Clear previous zone file data
+      lineinfile:
+        path: /etc/named/reverse.{{ hostname }}.{{ domain_name }}
+        regexp: '^[\s\S]*'
+        state: absent
+    - name: 6. new zone file content
+      lineinfile:
+        path: /etc/named/reverse.{{ hostname }}.{{ domain_name }}
+        regexp: '^[\s\S]*'
+        line: |
+          $TTL 86400
+          @     IN     SOA     ns1.{{ hostname }}.{{ domain_name }}. root.{{ hostname }}.{{ domain_name }}. (
+                               {{ ansible_date_time.epoch | int }} ; Serial
+                               15M ; Refresh
+                               5M ; Retry
+                               120M ; Expire
+                               600 ) ; Negative Cache TTL
+
+          @      IN     NS     ns1.
+          {{ quad_4 }}    IN     PTR    {{ hostname }}.{{ domain_name }}.
+
+- name: Check arpa reverse zone file is valid
+  become: true
+  command: named-checkzone {{ quad_1 }}.{{ quad_2 }}.{{ quad_3 }}.in-addr.arpa /etc/named/reverse.{{ hostname }}.{{ domain_name }}
+  register: result
+- debug:
+    var: result.stdout_lines
+
+
+- name: 6. Restart named service
+  service:
+    name: named
+    state: restarted

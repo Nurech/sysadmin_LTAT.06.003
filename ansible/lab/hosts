@@ -1,0 +1,9 @@
+[hosts]
+172.17.88.149
+
+[all:vars]
+hostname=C29890
+domain_name=sa.cs.ut.ee
+ansible_user=centos
+ansible_become_pass="{{ lookup('file', '../become_pass.txt') }}""
+ansible_ssh_pass="{{ lookup('file', '../ssh_pass.txt') }}"

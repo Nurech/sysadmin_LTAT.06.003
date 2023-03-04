@@ -1,6 +1,0 @@
-[hosts]
-172.17.88.149
-
-[all:vars]
-ansible_user=centos
-ansible_ssh_pass="{{ lookup('file', '../pass.txt') }}"
