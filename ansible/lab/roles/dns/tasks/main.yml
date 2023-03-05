@@ -280,21 +280,6 @@
     - name: 6. start systemctl
       ansible.builtin.raw: systemctl start named
 
-- name: 6. Print dig
-  block:
-    - name: 6. dig @127.0.0.1 {{ hostname }}.{{ domain_name }}
-      ansible.builtin.raw: dig @127.0.0.1 {{ hostname }}.{{ domain_name }}
-      register: results
-    - debug: var=results.stdout_lines
-    - name: 6. dig @127.0.0.1 ns1.{{ hostname }}.{{ domain_name }}
-      ansible.builtin.raw: dig @127.0.0.1 ns1.{{ hostname }}.{{ domain_name }}
-      register: results
-    - debug: var=results.stdout_lines
-    - name: 6. dig @127.0.0.1 {{ hostname }}.{{ domain_name }} NS
-      ansible.builtin.raw: dig @127.0.0.1 {{ hostname }}.{{ domain_name }} NS
-      register: results
-    - debug: var=results.stdout_lines
-
 - name: 6. Enable auto-starting the named
   ansible.builtin.raw: systemctl enable named
 
@@ -420,3 +405,18 @@
   service:
     name: named
     state: restarted
+
+- name: 6. Print dig
+  block:
+    - name: 6. dig @127.0.0.1 {{ hostname }}.{{ domain_name }}
+      ansible.builtin.raw: dig @127.0.0.1 {{ hostname }}.{{ domain_name }}
+      register: results
+    - debug: var=results.stdout_lines
+    - name: 6. dig @127.0.0.1 ns1.{{ hostname }}.{{ domain_name }}
+      ansible.builtin.raw: dig @127.0.0.1 ns1.{{ hostname }}.{{ domain_name }}
+      register: results
+    - debug: var=results.stdout_lines
+    - name: 6. dig @127.0.0.1 {{ hostname }}.{{ domain_name }} NS
+      ansible.builtin.raw: dig @127.0.0.1 {{ hostname }}.{{ domain_name }} NS
+      register: results
+    - debug: var=results.stdout_lines
