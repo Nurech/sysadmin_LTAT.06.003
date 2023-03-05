@@ -5,5 +5,5 @@
   vars:
 
   roles:
-#    - { role: etais, tags: etais }
+    - { role: etais, tags: etais }
     - { role: dns, tags: dns }

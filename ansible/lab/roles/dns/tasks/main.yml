@@ -101,7 +101,7 @@
     state: reloaded
 
 
-#4. Disable IPv6¶
+#4. Disable IPv6
 - name: 4. Disable IPv6
   copy:
     src: 70-ipv6.conf
@@ -141,7 +141,7 @@
     group: root
     mode: 0777
 
-#6 Configuring the BIND Name Server¶
+#6 Configuring the BIND Name Server
 - name: 6. Install bind and bind-utils on CentOS
   yum:
     name:
