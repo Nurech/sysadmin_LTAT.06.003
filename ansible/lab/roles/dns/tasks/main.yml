@@ -35,12 +35,19 @@
     name: sshd
     state: restarted
 
-#2. Check for the updates using CentOS package manager
-- name: 2. sudo dnf check-update -y
-  ansible.builtin.raw: sudo dnf check-update -y
+##2. Check for the updates using CentOS package manager
+#- name: 2. dnf check-update -y
+#  ansible.builtin.raw: sudo dnf check-update -y
+#
+#- name: 2. sudo dnf update -y
+#  ansible.builtin.raw: sudo dnf update -y
 
-- name: 2. sudo dnf update -y
-  ansible.builtin.raw: sudo dnf update -y
+
+- name: Check for updates
+  dnf:
+    name: "*"
+    state: latest
+    update_cache: yes
 
 - name: 2. Reboot the server
   tags: reboot

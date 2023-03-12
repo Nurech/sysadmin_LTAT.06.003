@@ -1,0 +1,9 @@
+<VirtualHost *:80>
+ ServerName wordpress.{{ hostname }}.{{ domain_name }}
+ DocumentRoot /var/www/html/wordpress
+ # Possible values include: debug, info, notice, warn, error, crit, alert, emerg.
+ LogLevel debug
+
+ ErrorLog /var/log/httpd/{{ hostname }}.{{ domain_name }}-error.log
+ CustomLog /var/log/httpd/{{ hostname }}.{{ domain_name }}-access.log combined
+</VirtualHost>

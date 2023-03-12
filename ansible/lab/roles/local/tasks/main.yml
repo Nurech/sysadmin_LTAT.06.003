@@ -1,0 +1,52 @@
+- name: Disable systemd-resolved
+  ansible.builtin.raw: sudo systemctl disable systemd-resolved
+
+- name: Remove docker0 interface
+  command: ip link delete docker0
+  ignore_errors: true
+
+- name: Disable systemd-resolved
+  ansible.builtin.raw: sudo systemctl stop systemd-resolved
+
+- name: Remove resolv.conf
+  become: yes
+  file:
+    path: /etc/resolv.conf
+    state: absent
+
+- name: Edit NetworkManager.conf
+  become: yes
+  lineinfile:
+    path: /etc/NetworkManager/NetworkManager.conf
+    line: dns=default
+    state: present
+
+- name: make /etc/resolv.conf
+  file:
+    path: /etc/resolv.conf
+    state: touch
+    owner: root
+    group: root
+    mode: 0777
+
+- name: edit /etc/resolv.conf
+  become: true
+  block:
+    - name: clear
+      lineinfile:
+        path: /etc/resolv.conf
+        regexp: '^[\s\S]*'
+        state: absent
+    - name: new content
+      lineinfile:
+        path: /etc/resolv.conf
+        regexp: '^[\s\S]*'
+        line: |
+          nameserver 193.40.5.39
+          nameserver 193.40.5.76
+
+- name: Restart NetworkManager service
+  become: yes
+  service:
+    name: NetworkManager
+    state: restarted

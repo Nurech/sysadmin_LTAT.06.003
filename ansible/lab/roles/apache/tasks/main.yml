@@ -1,0 +1,326 @@
+- name: Get OpenStack metadata
+  uri:
+    url: http://169.254.169.254/latest/meta-data/public-ipv4
+    method: GET
+    status_code: 200
+    return_content: yes
+  register: cloud_metadata
+- set_fact:
+    external_ip: "{{ cloud_metadata.content }}"
+    quad_1: "{{ cloud_metadata.content.split('.')[0] }}"
+    quad_2: "{{ cloud_metadata.content.split('.')[1] }}"
+    quad_3: "{{ cloud_metadata.content.split('.')[2] }}"
+    quad_4: "{{ cloud_metadata.content.split('.')[3] }}"
+
+#- name: Print external ip
+#  ansible.builtin.debug:
+#    msg: External IP is {{ external_ip }}
+#
+#- name: 1. Validation of previous week's tasks
+#  block:
+#  - name: Execute the nslookup command
+#    command: nslookup C29890.sa.cs.ut.ee
+#    register: nslookup_result
+#  - name: Parse the output
+#    set_fact:
+#      host_ip: "{{nslookup_result.stdout_lines[4].split()[-1]}}"
+#
+#- name: Print host_ip
+#  ansible.builtin.debug:
+#    msg: host_ip is {{ host_ip }}
+#
+#- name: Assert that host_ip = external_ip
+#  assert:
+#    that: host_ip == external_ip
+#
+#
+#
+#- name: Create zone file
+#  template:
+#    src: templates/zone.j2
+#    dest: /etc/named/{{ hostname }}.{{ domain_name }}
+#
+#- name: Reload DNS
+#  systemd:
+#    name: named
+#    state: reloaded
+#
+#- name: Check that CNAME record was added correctly
+#  shell: journalctl -r -u named && dig www.{{ hostname }}.sa.cs.ut.ee
+#  register: result
+#
+#- name: Debug output
+#  debug:
+#    var: result.stdout_lines
+#
+#- name: Install Apache Web Server
+#  become: true
+#  package:
+#    name: httpd
+#    state: present
+#
+#- name: Add port 80 to firewalld
+#  firewalld:
+#    zone: public
+#    port: "{{ item }}"
+#    permanent: yes
+#    state: enabled
+#  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+#  loop:
+#    - 80/tcp
+#  notify:
+#    - Restart firewalld
+#
+#- name: Restart service firewalld
+#  systemd:
+#    name: firewalld
+#    state: reloaded
+#
+#- name: Start HTTPD service
+#  become: true
+#  service:
+#    name: httpd
+#    state: started
+#
+#- name: Restart the name server (service named)
+#  become: true
+#  ansible.builtin.service:
+#    name: named
+#    state: restarted
+#
+#- name: Create webroot directory for {{ hostname }}
+#  file:
+#    path: /var/www/html/www.{{ hostname }}/public_html
+#    state: directory
+#    mode: 0755
+#    owner: root
+#    group: apache
+#
+#- name: Replace welcome.conf
+#  template:
+#    src: templates/welcome.conf.j2
+#    dest: /etc/httpd/conf.d/welcome.conf
+#
+#- name: Make index.html file
+#  template:
+#    src: templates/index.html.j2
+#    dest: /var/www/html/www.{{ hostname }}/public_html/index.html
+#
+- name: Create virtual host configuration file for www
+  template:
+    src: templates/vhost.conf.j2
+    dest: /etc/httpd/conf.d/www.{{ hostname }}.conf
+
+- name: Create virtual host configuration file for wodpress
+  template:
+    src: templates/wordpress.conf.j2
+    dest: /etc/httpd/conf.d/wordpress.{{ hostname }}.conf
+#
+#- name: Installing Python 3 and Flask
+#  dnf:
+#    name:
+#      - python3
+#      - python3-pip
+#    state: present
+#
+#- name: Install the pip3
+#  dnf:
+#    name: python3-pip
+#    state: present
+#
+#- name: Install Pip stuff
+#  pip:
+#    name:
+#      - flask
+#      - pymysql
+#      - pexpect
+#    executable: pip3
+#    state: present
+##
+#- name: Create server.py
+#  template:
+#    src: templates/server.py.j2
+#    dest: /usr/local/lib/server.py
+#
+#- name: Create proxy.conf
+#  template:
+#    src: templates/proxy.conf.j2
+#    dest: /etc/httpd/conf.d/proxy.conf
+#
+#- name: Allow HTTPD to connect to Python program
+#  ansible.builtin.raw: setsebool -P httpd_can_network_connect=1
+#
+- name: Reload Apache config
+  service:
+    name: httpd
+    state: restarted
+    enabled: yes
+#
+#- name: Create the proxy user
+#  user:
+#    name: proxy
+#    state: present
+#
+#- name: Create proxy.service
+#  template:
+#    src: templates/proxy.service.j2
+#    dest: /etc/systemd/system/proxy.service
+#
+#- name: Give ownership of the server file to the proxy user
+#  file:
+#    path: /usr/local/lib/server.py
+#    owner: proxy
+#    group: proxy
+#
+#- name: Reload systemctl service files
+#  command: 'systemctl daemon-reload'
+#
+#- name: Start the proxy service
+#  service:
+#    name: proxy
+#    state: started
+#
+#- name: Enable proxy service to be started on boot
+#  service:
+#    name: proxy
+#    enabled: yes
+#
+#
+- name: Install php-mysqlnd php-fpm mariadb-server httpd tar curl php-json
+  dnf:
+    name:
+      - php-mysqlnd
+      - php-fpm
+      - mariadb-server
+      - httpd
+      - tar
+      - curl
+      - php-json
+    state: present
+#
+#- name: Start MariaDB service
+#  service:
+#    name: mariadb
+#    state: started
+#
+#- name: Enable MariaDB service
+#  service:
+#    name: mariadb
+#    enabled: yes
+#
+#- name: Start httpd service
+#  service:
+#    name: httpd
+#    state: started
+#
+#- name: Enable httpd service
+#  service:
+#    name: httpd
+#    enabled: yes
+
+- name: Create my.cnf
+  template:
+    src: templates/my.cnf.j2
+    dest: /root/.my.cnf
+#
+#- name: secure mariadb
+#  become: yes
+#  expect:
+#    command: mysql_secure_installation
+#    responses:
+#      'Enter current password for root (enter for none)': "{{ ansible_become_pass }}"
+#      'Switch to unix_socket authentication':  'n'
+#      'Change the root password':  'Y'
+#      'New password': "{{ ansible_become_pass }}"
+#      'Re-enter new password': "{{ ansible_become_pass }}"
+#      'Enter current password for root': "{{ ansible_become_pass }}"
+#      'Set root password': 'n'
+#      'Remove anonymous users': 'Y'
+#      'Disallow root login remotely': 'Y'
+#      'Remove test database': 'Y'
+#      'Reload privilege tables now': 'Y'
+#    timeout: 1
+#  register: secure_mariadb
+#  failed_when: "'... Failed!' in secure_mariadb.stdout_lines"
+#
+#
+#- name: Create wordpress database
+#  community.mysql.mysql_db:
+#    name: wordpress
+#    state: present
+#
+#- name: Create admin user
+#  community.mysql.mysql_user:
+#    name: admin
+#    password: pass
+#    priv: "wordpress.*:ALL"
+#    state: present
+#
+#- name: Run several insert queries against db test_db in single transaction
+#  community.mysql.mysql_query:
+#    login_db: wordpress
+#    query:
+#    - GRANT ALL ON WordPress.* TO `admin`@`localhost`;
+#    - FLUSH PRIVILEGES;
+#    single_transaction: true
+#
+- name: Download and extract latest WordPress
+  get_url:
+    url: https://wordpress.org/latest.tar.gz
+    dest: /tmp/wordpress.tar.gz
+    mode: 0600
+
+- name: Create WordPress directory
+  file:
+    path: /var/www/html/wordpress
+    state: directory
+    mode: 0755
+    owner: apache
+    group: apache
+
+- name: Unpack WordPress
+  unarchive:
+    src: /tmp/wordpress.tar.gz
+    dest: /var/www/html/wordpress
+    remote_src: true
+
+- name: chown -R apache:apache /var/www/html/wordpress
+  ansible.builtin.raw: chown -R apache:apache /var/www/html/wordpress
+
+- name: chcon -t httpd_sys_rw_content_t /var/www/html/wordpress -R
+  ansible.builtin.raw: chcon -t httpd_sys_rw_content_t /var/www/html/wordpress -R
+
+- name: Create php-fpm.conf
+  template:
+    src: templates/php-fpm.conf.j2
+    dest: /etc/php-fpm.conf
+
+- name: Create www.conf
+  template:
+    src: templates/www.conf.j2
+    dest: /etc/php-fpm.d/www.conf
+
+- name: Create logfiles for php-errors.log
+  file:
+    path: /var/log/httpd/php-errors.log
+    state: touch
+    owner: apache
+    group: apache
+    mode: 0755
+    modification_time: preserve
+    access_time: preserve
+
+- name: Create logfiles for www-php-errors.log
+  file:
+    path: /var/log/httpd/www-php-errors.log
+    state: touch
+    owner: apache
+    group: apache
+    mode: 0755
+    modification_time: preserve
+    access_time: preserve
+
+- name: Start php-fpm service
+  service:
+    name: php-fpm
+    state: started
