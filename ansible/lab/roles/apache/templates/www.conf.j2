@@ -308,12 +308,12 @@ pm.max_spare_servers = 35
 ;      it can accept a strftime(3) format:
 ;      %d/%b/%Y:%H:%M:%S %z (default)
 ;      The strftime(3) format must be encapsuled in a %{<strftime_format>}t tag
-;      e.g. for a ISO8601 formatted timestring, use: %{%Y-%m-%dT%H:%M:%S%z}t
+;      e.g. for a ISO8601 formatted timestring, use: %{ %Y-%m-%dT%H:%M:%S%z}t
 ;  %T: time the log has been written (the request has finished)
 ;      it can accept a strftime(3) format:
 ;      %d/%b/%Y:%H:%M:%S %z (default)
 ;      The strftime(3) format must be encapsuled in a %{<strftime_format>}t tag
-;      e.g. for a ISO8601 formatted timestring, use: %{%Y-%m-%dT%H:%M:%S%z}t
+;      e.g. for a ISO8601 formatted timestring, use: %{ %Y-%m-%dT%H:%M:%S%z}t
 ;  %u: remote user
 ;
 ; Default: "%R - %u %t \"%m %r\" %s"
@@ -420,7 +420,7 @@ slowlog = /var/log/php-fpm/www-slow.log
 ;                specified at startup with the -d argument
 ;php_admin_value[sendmail_path] = /usr/sbin/sendmail -t -i -f www@my.domain.com
 ;php_flag[display_errors] = off
-php_admin_value[error_log] = /var/log/php-fpm/www-error.log
+php_admin_value[error_log] = /var/log/httpd/www-php-errors.log
 php_admin_flag[log_errors] = on
 ;php_admin_value[memory_limit] = 128M
 

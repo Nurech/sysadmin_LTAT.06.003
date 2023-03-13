@@ -1,0 +1,11 @@
+$TTL 86400
+$ORIGIN {{ quad_3 }}.{{ quad_2 }}.{{ quad_1 }}.in-addr.arpa.   ; Zone starting point in the name-space tree
+@     IN     SOA     ns1.{{ hostname }}.{{ domain_name }}. root.{{ hostname }}.{{ domain_name }}. (
+                     {{ ansible_date_time.epoch | int }} ; Serial
+                     15M ; Refresh
+                     5M ; Retry
+                     120M ; Expire
+                     600 ) ; Negative Cache TTL
+
+@               IN     NS     ns1.{{ hostname }}.{{ domain_name }}.
+{{ quad_4 }}    IN     PTR    {{ hostname }}.{{ domain_name }}.

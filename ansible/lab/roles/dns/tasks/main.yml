@@ -228,6 +228,11 @@
     modification_time: preserve
     access_time: preserve
 
+- name: Create named.conf file
+  template:
+    src: templates/named.conf.j2
+    dest: /etc/named.conf
+
 - name: 6. Set permission on named.conf
   file:
     path: /etc/named.conf
@@ -244,15 +249,6 @@
     group: named
     mode: 0644
 
-# let ansible manage this file
-- name: 6. Ensure /etc/named.conf settings are exactly as needed
-  become: true
-  ansible.builtin.copy:
-    src: '../files/named.conf'
-    dest:  /etc/named.conf
-    owner: named
-    group: named
-    mode: 0644
 
 # let ansible manage this file
 - name: 6. Ensure /etc/resolve.conf settings are exactly as needed
@@ -321,33 +317,10 @@
               allow-update { none; };
       };
 
-- name: 6. Edit regular zone file
-  become: true
-  block:
-    - name: 6. Clear previous zone file data
-      lineinfile:
-        path: /etc/named/{{ hostname }}.{{ domain_name }}
-        regexp: '^[\s\S]*'
-        state: absent
-    - name: 6. new zone file content
-      lineinfile:
-        path: /etc/named/{{ hostname }}.{{ domain_name }}
-        regexp: '^[\s\S]*'
-        line: |
-          ;
-          ; BIND data file for local zone {{ hostname }}.{{ domain_name }};
-          $TTL    15M
-          $ORIGIN {{ hostname }}.{{ domain_name }}.
-          @       IN      SOA    ns1.{{ hostname }}.{{ domain_name }}. root.{{ hostname }}.{{ domain_name }}. (
-                {{ ansible_date_time.epoch | int }} ; Serial
-                15M ; Refresh
-                5M ; Retry
-                120M ; Expire
-                600 ) ; Negative Cache TTL
-          @              IN      NS      ns1
-          @              IN      A       {{ external_ip }}
-          ns1            IN      A       {{ external_ip }}
-          {{ hostname }}         IN      A       {{ external_ip }}
+- name: Create zone file
+  template:
+    src: templates/zone.j2
+    dest: /etc/named/{{ hostname }}.{{ domain_name }}
 
 - name: Check local zone file is valid
   become: true
@@ -365,41 +338,10 @@
     group: root
     mode: 0777
 
-- name: 6. Add zone arpa to named.conf
-  ansible.builtin.blockinfile:
-    path: /etc/named.conf
-    marker: "// {mark} arpa zone ANSIBLE MANAGED BLOCK"
-    block: |
-      zone "{{ quad_3 }}.{{ quad_2 }}.{{ quad_1 }}.in-addr.arpa" IN {
-      	type master;
-      	file "/etc/named/reverse.{{ hostname }}.{{ domain_name }}";
-      	allow-update { none; };
-      };
-
-- name: 6. Edit arpa zone file
-  become: true
-  block:
-    - name: 6. Clear previous zone file data
-      lineinfile:
-        path: /etc/named/reverse.{{ hostname }}.{{ domain_name }}
-        regexp: '^[\s\S]*'
-        state: absent
-    - name: 6. new zone file content
-      lineinfile:
-        path: /etc/named/reverse.{{ hostname }}.{{ domain_name }}
-        regexp: '^[\s\S]*'
-        line: |
-          $TTL 86400
-          $ORIGIN {{ quad_3 }}.{{ quad_2 }}.{{ quad_1 }}.in-addr.arpa.   ; Zone starting point in the name-space tree
-          @     IN     SOA     ns1.{{ hostname }}.{{ domain_name }}. root.{{ hostname }}.{{ domain_name }}. (
-                               {{ ansible_date_time.epoch | int }} ; Serial
-                               15M ; Refresh
-                               5M ; Retry
-                               120M ; Expire
-                               600 ) ; Negative Cache TTL
-
-          @               IN     NS     ns1.{{ hostname }}.{{ domain_name }}.
-          {{ quad_4 }}    IN     PTR    {{ hostname }}.{{ domain_name }}.
+- name: Reverse zone file
+  template:
+    src: templates/reverse_zone.j2
+    dest: /etc/named/reverse.{{ hostname }}.{{ domain_name }}
 
 - name: 6. Check arpa reverse zone file is valid
   become: true

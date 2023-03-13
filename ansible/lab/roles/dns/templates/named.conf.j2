@@ -107,3 +107,9 @@ logging {
 
 include "/etc/named.rfc1912.zones";
 include "/etc/named.root.key";
+
+zone "{{ quad_3 }}.{{ quad_2 }}.{{ quad_1 }}.in-addr.arpa" IN {
+	type master;
+	file "/etc/named/reverse.{{ hostname }}.{{ domain_name }}";
+	allow-update { none; };
+};
