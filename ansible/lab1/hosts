@@ -7,6 +7,8 @@ ansible_user=jooseppa
 ansible_ssh_pass="{{ lookup('file', '../pass.txt') }}"
 ansible_ssh_user=jooseppa
 
+mail_user_pass=pass
+
 ansible_become_user=root
 ansible_become=true
 ansible_become_method=enable

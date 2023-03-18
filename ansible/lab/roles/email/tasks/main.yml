@@ -1,0 +1,371 @@
+- name: (pre - optional) Get OpenStack metadata
+  uri:
+    url: http://169.254.169.254/latest/meta-data/public-ipv4
+    method: GET
+    status_code: 200
+    return_content: yes
+  register: cloud_metadata
+- set_fact:
+    external_ip: "{{ cloud_metadata.content }}"
+    quad_1: "{{ cloud_metadata.content.split('.')[0] }}"
+    quad_2: "{{ cloud_metadata.content.split('.')[1] }}"
+    quad_3: "{{ cloud_metadata.content.split('.')[2] }}"
+    quad_4: "{{ cloud_metadata.content.split('.')[3] }}"
+
+- name: (pre - optional) Print IP address
+  debug: var=cloud_metadata.content
+
+- name: Create zone file
+  template:
+    src: templates/zone.j2
+    dest: /etc/named/{{ hostname }}.{{ domain_name }}
+
+- name: Check local zone file is valid
+  become: true
+  command: named-checkzone {{ hostname }}.{{ domain_name }} /etc/named/{{ hostname }}.{{ domain_name }}
+  register: result
+- debug:
+    var: result.stdout_lines
+
+- name: Restart service named
+  service:
+    name: named
+    state: restarted
+
+- name: Print dig
+  block:
+    - name: dig mail
+      ansible.builtin.raw: dig -t A mail.{{ hostname }}.{{ domain_name }}
+      register: results
+    - debug: var=results.stdout_lines
+    - name: dig MX
+      ansible.builtin.raw: dig -t MX {{ hostname }}.{{ domain_name }}
+      register: results
+    - debug: var=results.stdout_lines
+
+- name: Install postfix
+  package:
+    name: postfix
+    state: present
+
+- name: Stop service dovecot and postfix
+  become: yes
+  become_user: root
+  service:
+    name: "{{ item }}"
+    state: stopped
+  with_items:
+    - dovecot
+    - postfix
+
+- name: Create postfix main.cf file
+  template:
+    src: templates/main.cf.j2
+    dest: /etc/postfix/main.cf
+
+- name: Create 10-master.conf
+  template:
+    src: templates/10-master.conf.j2
+    dest: /etc/dovecot/conf.d/10-master.conf
+
+- name: Create postfix master.cf file
+  template:
+    src: templates/master.cf.j2
+    dest: /etc/postfix/master.cf
+
+- name: Restart postfix
+  service:
+    name: postfix
+    state: restarted
+
+- name: Test emails by sending an email from a user inside the VM
+  block:
+    - name: Send an email from a user to root@localhost
+      ansible.builtin.raw: echo "text" | sendmail "root@localhost"
+
+- name: Add email ports to firewalld
+  firewalld:
+    zone: public
+    port: "{{ item }}"
+    permanent: yes
+    state: enabled
+  when: ansible_distribution == 'CentOS' or ansible_distribution == 'Red Hat Enterprise Linux'
+  loop:
+    - 25/tcp
+    - 465/tcp
+    - 587/tcp
+    - 995/tcp
+    - 451/tcp
+    - 421/tcp
+    - 143/tcp
+    - 993/tcp
+    - 110/tcp
+
+- name: Reload service firewalld
+  systemd:
+    name: firewalld
+    state: reloaded
+
+- name: Create user mailuser
+  user:
+    name: mailuser
+    password: "{{ 'mailuser' | password_hash('sha512') }}"
+    state: present
+
+- name: Install alpine mail client
+  become: true
+  package:
+    name:
+      - alpine
+      - net-tools
+    state: present
+
+- name: Install packages
+  become: true
+  package:
+    name:
+      - dovecot
+      - telnet
+    state: present
+
+- name: Create dovecot.conf
+  template:
+    src: templates/dovecot.conf.j2
+    dest: /etc/dovecot/dovecot.conf
+
+- name: Create 10-auth.conf
+  template:
+    src: templates/10-auth.conf.j2
+    dest: /etc/dovecot/conf.d/10-auth.conf
+
+- name: Create 10-logging.conf
+  template:
+    src: templates/10-logging.conf.j2
+    dest: /etc/dovecot/conf.d/10-logging.conf
+
+- name: Create 10-mail.conf
+  template:
+    src: templates/10-mail.conf.j2
+    dest: /etc/dovecot/conf.d/10-mail.conf
+
+- name: Create 10-ssl.conf
+  template:
+    src: templates/10-ssl.conf.j2
+    dest: /etc/dovecot/conf.d/10-ssl.conf
+
+- name: Create 15-mailboxes.conf
+  template:
+    src: templates/15-mailboxes.conf.j2
+    dest: /etc/dovecot/conf.d/15-mailboxes.conf
+
+- name: Ensure dovecot is in mail group
+  become: yes
+  user:
+    name: dovecot
+    groups: mail
+    append: yes
+
+- name: Start service dovecot and postfix
+  become: yes
+  become_user: root
+  service:
+    name: "{{ item }}"
+    state: started
+  with_items:
+    - dovecot
+    - postfix
+
+- name: Send email to nagios@scoring.{{ domain_name }}
+  become: yes
+  become_user: mailuser
+  mail:
+    subject: "Lab5 Test Email"
+    body: "This is a test email sent from mailuser@{{ hostname }}.{{ domain_name }}"
+    to: nagios@scoring.{{ domain_name }}
+    from: mailuser@{{ hostname }}.{{ domain_name }}
+
+- name: Check if the mail is being sent successfully
+  ansible.builtin.raw: dig MX scoring.sa.cs.ut.ee
+  register: results
+- debug: var=results.stdout_lines
+
+
+- name: Install epel-release and dnf-plugins-core
+  become: yes
+  package:
+    name:
+      - epel-release
+      - dnf-plugins-core
+    state: present
+
+- name: Enable crb
+  become: yes
+  command: dnf config-manager --set-enabled crb
+
+- name: Install packages
+  become: yes
+  package:
+    name:
+      - make
+      - ImageMagick
+      - ImageMagick-devel
+      - ImageMagick-perl
+      - pcre-devel
+      - zlib
+      - zlib-devel
+      - libzip
+      - libzip-devel
+      - libmcrypt-devel
+      - php
+      - php-fpm
+      - php-devel
+      - php-pear
+      - php-cli
+      - php-gd
+      - php-curl
+      - php-xml
+      - php-mysqlnd
+      - php-mbstring
+      - php-intl
+      - php-ldap
+
+- name: Install Imagick, Mcrypt and Zip extensions
+  become: yes
+  expect:
+    command: pecl install {{ item }}
+    responses:
+      'Please provide the prefix of ImageMagick installation': ''
+      'libmcrypt prefix?': ''
+    timeout: 1
+  with_items:
+    - imagick
+    - mcrypt
+    - zip
+  ignore_errors: true
+
+- name: Create configuration files for Imagick, Mcrypt and Zip
+  become: true
+  file:
+    path: "/etc/php.d/20-{{ item }}.ini"
+    state: touch
+    mode: 0644
+  with_items:
+    - imagick
+    - mcrypt
+    - zip
+
+- name: Add configuration for Imagick, Mcrypt and Zip
+  become: true
+  lineinfile:
+    path: "/etc/php.d/20-{{ item }}.ini"
+    line: "extension={{ item }}.so"
+  with_items:
+    - imagick
+    - mcrypt
+    - zip
+
+- name: Ensure Services are Running and Enabled
+  become: true
+  service:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+  loop:
+    - httpd
+    - mariadb
+    - php-fpm
+
+- name: Create roundcubemail database
+  community.mysql.mysql_db:
+    name: roundcubemail
+    state: present
+
+- name: set a fact variable with a random password
+  set_fact:
+    random_password: "{{ lookup('pipe', 'openssl rand -hex 16') }}"
+
+- name: show password
+  debug: var=random_password
+
+- name: Create user
+  community.mysql.mysql_user:
+    name: roundcube
+    password: "{{ random_password }}"
+    priv: "roundcube.*:ALL"
+    state: present
+
+- name: Run several insert queries against db test_db in single transaction
+  community.mysql.mysql_query:
+    query:
+      - GRANT ALL ON roundcubemail.* TO `roundcube`@`localhost`;
+      - FLUSH PRIVILEGES;
+    single_transaction: true
+
+- name: Download Roundcube
+  get_url:
+    url: https://github.com/roundcube/roundcubemail/releases/download/1.6.1/roundcubemail-1.6.1-complete.tar.gz
+    dest: /tmp/roundcube.tar.gz
+    mode: 0600
+
+- name: Create directory
+  file:
+    path: /var/www/html/roundcubemail
+    state: directory
+    mode: 0755
+    owner: apache
+    group: apache
+
+- name: Create directory
+  file:
+    path: /var/www/html/roundcubemail/logs/
+    state: directory
+    mode: 0755
+    owner: apache
+    group: apache
+
+- name: Unpack
+  unarchive:
+    src: /tmp/roundcube.tar.gz
+    dest: /var/www/html
+    remote_src: true
+
+- name: Copy files
+  copy:
+    remote_src: true
+    src: /var/www/html/roundcubemail-1.6.1/
+    dest: /var/www/html/roundcubemail
+    directory_mode: true
+
+- name: Permissions
+  ansible.builtin.raw: chown -R apache:apache /var/www/html/roundcubemail
+
+- name: Permissions
+  ansible.builtin.raw: chcon -t httpd_sys_rw_content_t /var/www/html/roundcubemail -R
+
+- name: Create mail.{{ hostname }}.{{ domain_name }}.conf
+  template:
+    src: templates/roundcube.conf.j2
+    dest: /etc/httpd/conf.d/mail.{{ hostname }}.{{ domain_name }}.conf
+
+- name: Create config.inc.php
+  template:
+    src: templates/config.inc.php.j2
+    dest: /var/www/html/roundcubemail/config/config.inc.php
+
+- name: Create directory
+  file:
+    path: /var/log/roundcube
+    state: directory
+    mode: 0755
+    owner: apache
+    group: apache
+
+- name: Remove installer directory from /var/www/html/roundcubemail/installer
+  file:
+    path: /var/www/html/roundcubemail/installer
+    state: absent
+
+- name: Restart Apache
+  service:
+    name: httpd
+    state: restarted
