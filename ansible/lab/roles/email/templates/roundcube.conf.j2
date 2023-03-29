@@ -9,3 +9,22 @@
  CustomLog /var/log/httpd/mail.{{ hostname }}.{{ domain_name }}-access.log combined
  ForensicLog /var/log/httpd/mail.{{ hostname }}.{{ domain_name }}-forensic.log
 </VirtualHost>
+
+<VirtualHost *:443>
+ ServerAdmin root@{{ hostname }}.{{ domain_name }}
+ ServerName mail.{{ hostname }}.{{ domain_name }}
+ DocumentRoot /var/www/html/roundcubemail
+ <Directory /var/www/html/roundcubemail>
+     Allowoverride all
+ </Directory>
+
+ SSLEngine On
+ SSLCertificateFile /etc/pki/tls/certs/www_server.crt
+ SSLCertificateKeyFile /etc/pki/tls/private/www_server.key
+ SSLCACertificateFile /etc/pki/tls/certs/cacert.crt
+
+ ErrorLog /var/log/httpd/mail.{{ hostname }}.{{ domain_name }}-error.log
+ CustomLog /var/log/httpd/mail.{{ hostname }}.{{ domain_name }}-access.log combined
+ ForensicLog /var/log/httpd/mail.{{ hostname }}.{{ domain_name }}-forensic.log
+</VirtualHost>
+

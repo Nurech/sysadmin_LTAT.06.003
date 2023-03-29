@@ -1,0 +1,108 @@
+- name: Create necessary directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /etc/pki/tls/certs
+    - /etc/pki/tls/private
+
+- name: Read cert_data file
+  set_fact:
+    cert_data: "{{ lookup('file', '../templates/cert_data') | from_json }}"
+
+- name: Replace comma with newline in caChain
+  set_fact:
+    ca_chain_fixed: "{{ cert_data.caChain.replace(',', '\n') }}"
+
+- name: Copy certificate files
+  copy:
+    content: "{{ item.content }}"
+    dest: "{{ item.dest }}"
+    mode: '0644'
+  loop:
+    - { content: "{{ cert_data.certificate }}", dest: '/etc/pki/tls/certs/www_server.crt' }
+    - { content: "{{ cert_data.privateKey }}", dest: '/etc/pki/tls/private/www_server.key' }
+    - { content: "{{ ca_chain_fixed }}", dest: '/etc/pki/tls/certs/cacert.crt' }
+
+- name: Create necessary directories for Postfix certificates
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /etc/pki/tls/certs
+    - /etc/pki/tls/private
+
+- name: Copy certificate and private key for Postfix
+  copy:
+    content: "{{ cert_data[item.key] }}"
+    dest: "{{ item.path }}"
+    mode: '0644'
+  loop:
+    - { key: 'certificate', path: '/etc/pki/tls/certs/postfix.pem' }
+    - { key: 'privateKey', path: '/etc/pki/tls/private/postfix.key' }
+
+- name: Ensure Postfix service is running and enabled
+  systemd:
+    name: postfix
+    state: started
+    enabled: yes
+
+- name: Create necessary directories for Dovecot certificates
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /etc/pki/dovecot/certs
+    - /etc/pki/dovecot/private
+
+- name: Copy certificate and private key for Dovecot
+  copy:
+    content: "{{ cert_data[item.key] }}"
+    dest: "{{ item.path }}"
+    mode: '0644'
+  loop:
+    - { key: 'certificate', path: '/etc/pki/dovecot/certs/dovecot.pem' }
+    - { key: 'privateKey', path: '/etc/pki/dovecot/private/dovecot.pem' }
+
+- name: Ensure Dovecot service is running and enabled
+  systemd:
+    name: dovecot
+    state: started
+    enabled: yes
+
+- name: Configure SSL for the web server
+  template:
+    src: templates/ssl.conf.j2
+    dest: /etc/httpd/conf.d/ssl.conf
+    mode: '0644'
+
+- name: Ensure the web server is running and enabled
+  systemd:
+    name: httpd
+    state: started
+    enabled: yes
+
+- name: Test STARTTLS on port 587
+  command: openssl s_client -connect mail.{{ hostname }}.{{ domain_name }}:587 -starttls smtp -CAfile /etc/pki/tls/certs/cacert.crt
+  async: 10
+  poll: 1
+  register: result_starttls
+  ignore_errors: yes
+
+- name: Display STARTTLS result
+  debug:
+    var: result_starttls.stdout_lines
+
+- name: Test SSL/TLS on port 465
+  command: openssl s_client -connect mail.{{ hostname }}.{{ domain_name }}:465 -CAfile /etc/pki/tls/certs/cacert.crt
+  async: 10
+  poll: 1
+  register: result_tls
+  ignore_errors: yes
+
+- name: Display SSL/TLS result
+  debug:
+    var: result_tls.stdout_lines

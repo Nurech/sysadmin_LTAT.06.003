@@ -1,0 +1,87 @@
+- name: Get OpenStack metadata
+  uri:
+    url: http://169.254.169.254/latest/meta-data/public-ipv4
+    method: GET
+    status_code: 200
+    return_content: yes
+  register: cloud_metadata
+- set_fact:
+    external_ip: "{{ cloud_metadata.content }}"
+    quad_1: "{{ cloud_metadata.content.split('.')[0] }}"
+    quad_2: "{{ cloud_metadata.content.split('.')[1] }}"
+    quad_3: "{{ cloud_metadata.content.split('.')[2] }}"
+    quad_4: "{{ cloud_metadata.content.split('.')[3] }}"
+
+- name: Print external ip
+  ansible.builtin.debug:
+    msg: External IP is {{ external_ip }}
+
+- name: Install necessary packages
+  become: yes
+  package:
+    name:
+      - make
+      - ImageMagick
+      - ImageMagick-devel
+      - ImageMagick-perl
+      - pcre-devel
+      - zlib
+      - zlib-devel
+      - libzip
+      - libzip-devel
+      - libmcrypt-devel
+      - php
+      - php-fpm
+      - php-devel
+      - php-pear
+      - php-cli
+      - php-gd
+      - php-curl
+      - php-xml
+      - php-mysqlnd
+      - php-mbstring
+      - php-intl
+      - php-ldap
+      - httpd
+      - mod_ssl
+      - cyrus-sasl-plain
+      - python3
+      - python3-pip
+
+- name: Install Pip stuff
+  pip:
+    name:
+      - flask
+      - pymysql
+      - pexpect
+    executable: pip3
+    state: present
+
+- name: Add ports to firewalld
+  firewalld:
+    zone: public
+    port: "{{ item }}"
+    state: enabled
+    immediate: true
+    permanent: true
+  loop:
+    - 25/tcp
+    - 995/tcp
+    - 451/tcp
+    - 421/tcp
+    - 143/tcp
+    - 993/tcp
+    - 993/udp
+    - 110/tcp
+    - 443/tcp
+    - 80/udp
+    - 465/tcp
+    - 465/udp
+    - 80/tcp
+    - 587/udp
+    - 587/tcp
+
+- name: Reload service firewalld
+  systemd:
+    name: firewalld
+    state: reloaded

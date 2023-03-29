@@ -1,8 +1,21 @@
 <VirtualHost *:80>
  ServerName www.{{ hostname }}.{{ domain_name }}
  DocumentRoot /var/www/html/www.{{ hostname }}/public_html
- # Possible values include: debug, info, notice, warn, error, crit, alert, emerg.
  LogLevel debug
+
+ ErrorLog /var/log/httpd/{{ hostname }}.{{ domain_name }}-error.log
+ CustomLog /var/log/httpd/{{ hostname }}.{{ domain_name }}-access.log combined
+</VirtualHost>
+
+<VirtualHost *:443>
+ ServerName www.{{ hostname }}.{{ domain_name }}
+ DocumentRoot /var/www/html/www.{{ hostname }}/public_html
+ LogLevel debug
+
+ SSLEngine On
+ SSLCertificateFile /etc/pki/tls/certs/www_server.crt
+ SSLCertificateKeyFile /etc/pki/tls/private/www_server.key
+ SSLCACertificateFile /etc/pki/tls/certs/cacert.crt
 
  ErrorLog /var/log/httpd/{{ hostname }}.{{ domain_name }}-error.log
  CustomLog /var/log/httpd/{{ hostname }}.{{ domain_name }}-access.log combined
