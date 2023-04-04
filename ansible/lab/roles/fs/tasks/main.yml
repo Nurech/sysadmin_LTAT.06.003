@@ -1,0 +1,217 @@
+#- name: Install the nfs-utils package
+#  ansible.builtin.package:
+#    name: nfs-utils
+#    state: present
+#
+#- name: Start and enable nfs-server service
+#  ansible.builtin.service:
+#    name: nfs-server
+#    state: started
+#    enabled: yes
+#
+#- name: Create the directories for NFS
+#  ansible.builtin.file:
+#    path: "{{ item }}"
+#    state: directory
+#  loop:
+#    - /shares/nfs
+#    - /mnt/nfs
+#
+#- name: Configure /etc/exports
+#  ansible.builtin.lineinfile:
+#    path: /etc/exports
+#    line: "/shares/nfs localhost(rw,sync,no_root_squash,no_subtree_check)"
+#
+#- name: Apply the configuration changes
+#  ansible.builtin.command:
+#    cmd: exportfs -a
+#
+#- name: Mount the NFS share
+#  ansible.builtin.mount:
+#    fstype: nfs
+#    src: localhost:/shares/nfs
+#    path: /mnt/nfs
+#    state: mounted
+#
+#- name: Open ports 111 and 2049 (TCP) in the firewall
+#  ansible.builtin.firewalld:
+#    port: "{{ item }}"
+#    permanent: yes
+#    state: enabled
+#    immediate: yes
+#  loop:
+#    - 111/tcp
+#    - 2049/tcp
+#
+#
+#- name: View all block devices attached to your system
+#  ansible.builtin.shell: "lsblk"
+#  register: lsblk_output
+#
+#- name: Display lsblk output
+#  ansible.builtin.debug:
+#    var: lsblk_output.stdout_lines
+#
+#- name: Create extended partition on /dev/sdb
+#  ansible.builtin.parted:
+#    device: /dev/sdb
+#    number: 1
+#    state: present
+#    part_type: extended
+#    part_start: 1MiB
+#    part_end: 800MiB
+#
+#- name: Create logical partitions on /dev/sdb
+#  ansible.builtin.parted:
+#    device: /dev/sdb
+#    number: "{{ item.number }}"
+#    state: present
+#    part_type: logical
+#    part_start: "{{ item.part_start }}"
+#    part_end: "{{ item.part_end }}"
+#  loop:
+#    - {number: 5, part_start: 2MiB, part_end: 552MiB}
+#    - {number: 6, part_start: 553MiB, part_end: 600MiB}
+#
+#
+#- name: Install filesystems on the partitions
+#  ansible.builtin.filesystem:
+#    fstype: "{{ item.fstype }}"
+#    dev: "/dev/sdb{{ item.number }}"
+#    opts: "-L {{ item.label }}"
+#  loop:
+#    - {number: 5, fstype: ext4, label: 'lab8FSext4'}
+#    - {number: 6, fstype: xfs, label: 'lab8FSxfs'}
+#
+#
+#- name: Create mount directories
+#  ansible.builtin.file:
+#    path: "/lab8/fs-{{ item }}"
+#    state: directory
+#  loop:
+#    - 'ext4'
+#    - 'xfs'
+#
+#- name: Add entries to /etc/fstab
+#  ansible.builtin.lineinfile:
+#    path: /etc/fstab
+#    line: "LABEL={{ item.label }} /lab8/fs-{{ item.fstype }} {{ item.fstype }} defaults 0 0"
+#  loop:
+#    - { label: 'lab8FSext4', fstype: 'ext4' }
+#    - { label: 'lab8FSxfs', fstype: 'xfs' }
+#
+#- name: Test config with mount -a
+#  ansible.builtin.command: "mount -a"
+#
+#- name: View all block devices attached to your system
+#  ansible.builtin.shell: "lsblk"
+#  register: lsblk_output
+#
+#- name: Display lsblk output
+#  ansible.builtin.debug:
+#    var: lsblk_output.stdout_lines
+#
+#
+#
+## Samba
+#
+#- name: Install required packages for SAMBA
+#  ansible.builtin.package:
+#    name:
+#      - samba
+#      - samba-common
+#      - samba-client
+#      - cifs-utils
+#    state: present
+#
+#- name: Create the directory for exporting SAMBA shares
+#  ansible.builtin.file:
+#    path: /shares/samba
+#    state: directory
+#    mode: '0755'
+#
+#- name: Create samba_group
+#  ansible.builtin.group:
+#    name: samba_group
+#    state: present
+#
+#- name: Add users to samba_group
+#  ansible.builtin.user:
+#    name: "{{ item }}"
+#    groups: samba_group
+#    append: yes
+#  loop:
+#    - scoring
+#    - centos
+#
+#- name: Add samba passwords for users
+#  ansible.builtin.shell:
+#    cmd: "echo -e '{{ item.password }}\\n{{ item.password }}' | smbpasswd -a {{ item.name }} -s"
+#  loop:
+#    - {name: 'scoring', password: '2daysuperadmin'}
+#    - {name: 'centos', password: 'your_password_here'}
+#
+#- name: Set permissions and SELinux context for the SAMBA share
+#  ansible.builtin.command:
+#    cmd: "{{ item }}"
+#  loop:
+#    - "chmod -R 0755 /shares/samba"
+#    - "chown -R root:samba_group /shares/samba"
+#    - "chcon -t samba_share_t /shares/samba"
+#
+#- name: Add smb configuration to /etc/samba/smb.conf
+#  ansible.builtin.blockinfile:
+#    path: /etc/samba/smb.conf
+#    block: |
+#      [smb]
+#      comment = Samba share for SA lab
+#      valid users = @samba_group
+#      path = /shares/samba
+#      browsable = yes
+#      writable = yes
+#
+#- name: Start and enable smb service
+#  ansible.builtin.systemd:
+#    name: smb
+#    state: started
+#    enabled: yes
+#
+#
+## Consul
+#
+- name: Configure Consul Key-Value store
+  command: /usr/local/bin/consul kv put object/{{ hostname | lower }} {{ consul_pass }}
+  args:
+    warn: false
+  changed_when: false
+  no_log: true
+  vars:
+    machine_name: "{{ hostname | lower }}"
+    password: "{{ consul_pass }}"
+
+#MINIO
+
+- name: Download MinIO Client binary
+  ansible.builtin.get_url:
+    url: https://dl.min.io/client/mc/release/linux-amd64/mc
+    dest: /usr/bin/mc
+    owner: root
+    mode: '0755'
+
+- name: Create a bucket with the machine name
+  ansible.builtin.shell:
+    cmd: mc mb scoring/{{ hostname | lower }}
+  args:
+    executable: /bin/bash
+
+- name: Create scoringtestfile with the machine name
+  ansible.builtin.copy:
+    dest: /etc/scoringtestfile
+    content: "{{ hostname | lower}}"
+
+- name: Upload scoringtestfile to the bucket
+  ansible.builtin.shell:
+    cmd: mc cp /etc/scoringtestfile scoring/{{ hostname | lower }}/scoringtestfile
+  args:
+    executable: /bin/bash
+

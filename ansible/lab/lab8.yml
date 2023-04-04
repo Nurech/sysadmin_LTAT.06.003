@@ -1,0 +1,14 @@
+---
+- hosts: all
+  user: centos
+  become: yes
+  vars:
+
+  roles:
+#    - { role: general, tags: general}
+#    - { role: etais, tags: etais }
+#    - { role: dns, tags: dns }
+#    - { role: apache, tags: apache}
+#    - { role: email, tags: email}
+#    - { role: tls, tags: tls}
+    - { role: fs, tags: fs}

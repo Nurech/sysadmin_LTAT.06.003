@@ -80,6 +80,12 @@
     - 80/tcp
     - 587/udp
     - 587/tcp
+    - 139/tcp
+    - 2049/tcp
+    - 445/tcp
+    - 9000/tcp
+    - 9090/tcp
+    - 9001/tcp
 
 - name: Reload service firewalld
   systemd:
