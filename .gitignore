@@ -2,3 +2,4 @@ ansible/ssh_pass.txt
 ansible/become_pass.txt
 ansible/info.txt
 **/cert_data
+.idea
