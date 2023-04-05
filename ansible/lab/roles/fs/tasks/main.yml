@@ -111,8 +111,6 @@
   ansible.builtin.debug:
     var: lsblk_output.stdout_lines
 
-
-
 # Samba
 
 - name: Install required packages for SAMBA
@@ -144,12 +142,15 @@
     - scoring
     - centos
 
-- name: Add samba passwords for users
-  ansible.builtin.shell:
-    cmd: "echo -e '{{ item.password }}\\n{{ item.password }}' | smbpasswd -a {{ item.name }} -s"
+- name: Add Samba passwords for users
+  expect:
+    command: smbpasswd -a {{ item.username }}
+    responses:
+      "New SMB password:": "{{ item.password }}"
+      "Retype new SMB password:": "{{ item.password }}"
   loop:
-    - {name: 'scoring', password: '2daysuperadmin'}
-    - {name: 'centos', password: 'your_password_here'}
+    - { username: 'scoring', password: '2daysuperadmin' }
+    - { username: 'centos', password: '2daysuperadmin' }
 
 - name: Set permissions and SELinux context for the SAMBA share
   ansible.builtin.command:
@@ -173,9 +174,8 @@
 - name: Start and enable smb service
   ansible.builtin.systemd:
     name: smb
-    state: started
+    state: restarted
     enabled: yes
-
 
 # Consul
 
@@ -189,7 +189,7 @@
     machine_name: "{{ hostname | lower }}"
     password: "{{ consul_pass }}"
 
-#MINIO
+# Minio
 
 - name: Download MinIO Client binary
   ansible.builtin.get_url:
@@ -198,16 +198,24 @@
     owner: root
     mode: '0755'
 
+- name: Add user to MinIO Client
+  expect:
+    command: mc config host add scoring https://scoring.sa.cs.ut.ee:9000
+    responses:
+      "Enter Access Key:": "{{ hostname | lower }}"
+      "Enter Secret Key:": "{{ consul_pass }}"
+
 - name: Create a bucket with the machine name
   ansible.builtin.shell:
     cmd: mc mb scoring/{{ hostname | lower }}
-  args:
     executable: /bin/bash
+  register: create_bucket_result
+  failed_when: "'ERROR' in create_bucket_result.stderr and 'already own it' not in create_bucket_result.stderr"
 
 - name: Create scoringtestfile with the machine name
   ansible.builtin.copy:
     dest: /etc/scoringtestfile
-    content: "{{ hostname | lower}}"
+    content: "{{ hostname | lower }}"
 
 - name: Upload scoringtestfile to the bucket
   ansible.builtin.shell:

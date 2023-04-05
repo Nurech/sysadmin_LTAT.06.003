@@ -47,6 +47,12 @@
       - cyrus-sasl-plain
       - python3
       - python3-pip
+      - expect
+      - nfs-utils
+      - samba
+      - samba-common
+      - samba-client
+      - cifs-utils
 
 - name: Install Pip stuff
   pip:
