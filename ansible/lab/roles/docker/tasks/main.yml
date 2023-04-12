@@ -1,0 +1,193 @@
+- name: Ensure /etc/docker directory exists
+  ansible.builtin.file:
+    path: /etc/docker
+    state: directory
+    mode: '0755'
+
+- name: Create /etc/docker/daemon.json
+  template:
+    src: templates/daemon.json
+    dest: /etc/docker/daemon.json
+
+
+- name: docker add
+  ansible.builtin.shell:
+    cmd: "{{ item }}"
+  loop:
+    - "yum install -y yum-utils"
+    - "yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo"
+#    - "yum install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin"
+
+- name: Install Pip stuff
+  pip:
+    name:
+      - docker-py
+    executable: pip3
+    state: present
+
+- name: docker install software
+  ansible.builtin.yum:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+
+
+- name: Start Docker service
+  ansible.builtin.systemd:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Run Docker Hello World container using alternative registry
+  ansible.builtin.docker_container:
+    name: hello-world
+    image: registry.hpc.ut.ee/mirror/library/hello-world:latest
+    pull: yes
+    state: started
+    restart: yes
+  register: docker_hello_world
+  ignore_errors: yes
+
+- name: Display the result of the Hello World container
+  ansible.builtin.debug:
+    var: docker_hello_world
+
+
+#Who am I stuff
+
+- name: Run 'whoami' Docker container in detached mode
+  ansible.builtin.docker_container:
+    name: whoami
+    image: registry.hpc.ut.ee/mirror/containous/whoami:latest
+    state: started
+    pull: yes
+    detach: yes
+
+- name: Get the list of running Docker containers
+  ansible.builtin.command: docker ps
+  register: docker_ps_output
+
+- name: Display the list of running Docker containers
+  ansible.builtin.debug:
+    var: docker_ps_output.stdout_lines
+
+- name: Inspect the 'whoami' Docker container
+  ansible.builtin.command: docker inspect whoami
+  register: docker_inspect_output
+
+- name: Display the 'whoami' Docker container NetworkSettings
+  ansible.builtin.debug:
+    var: docker_inspect_output.stdout | from_json | json_query("*.NetworkSettings")
+
+- name: Get the IP address of the 'whoami' Docker container
+  set_fact:
+    whoami_ip: "{{ (docker_inspect_output.stdout | from_json)[0].NetworkSettings.IPAddress }}"
+
+- name: Display the IP address of the 'whoami' Docker container
+  ansible.builtin.debug:
+    var: whoami_ip
+
+- name: Query the 'whoami' Docker container using the IP address
+  ansible.builtin.uri:
+    url: "http://{{ whoami_ip }}"
+    return_content: yes
+  register: query_response
+
+- name: Display the query response from the 'whoami' Docker container
+  ansible.builtin.debug:
+    var: query_response.content
+
+# docker container stuff
+
+- name: Ensure server.py is present
+  ansible.builtin.copy:
+    src: templates/server.py
+    dest: /opt/server.py
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Ensure Dockerfile is present
+  ansible.builtin.copy:
+    content: |
+      FROM registry.hpc.ut.ee/mirror/library/alpine
+
+      RUN apk add --no-cache python3 py3-pip
+      RUN pip3 install flask
+
+      COPY server.py /opt/server.py
+
+      EXPOSE 5000
+      CMD python3 /opt/server.py
+    dest: /opt/Dockerfile
+
+- name: Build the Docker container
+  ansible.builtin.command: "docker build -t docker_lab /opt"
+
+- name: Run the Flask Docker container
+  ansible.builtin.docker_container:
+    name: docker_lab
+    image: docker_lab
+    state: started
+    detach: yes
+    exposed_ports:
+      - "5000"
+  register: docker_lab_container
+
+- name: Get the container's IP address
+  ansible.builtin.shell: "docker inspect --format='{{ '{{' }} .NetworkSettings.IPAddress {{ '}}' }}' docker_lab"
+  register: docker_lab_ip
+
+- name: Display the container's IP address
+  ansible.builtin.debug:
+    var: docker_lab_ip.stdout
+
+- name: Pause for a moment to ensure the container is fully started
+  ansible.builtin.pause:
+    seconds: 5
+
+- name: Test the Flask server
+  ansible.builtin.uri:
+    url: "http://{{ docker_lab_ip.stdout }}:5000"
+    return_content: yes
+  register: flask_response
+
+- name: Display the Flask server response
+  ansible.builtin.debug:
+    var: flask_response.content
+
+# docker network stuff
+
+- name: Open port 5005/tcp in firewalld
+  ansible.posix.firewalld:
+    port: 5005/tcp
+    permanent: yes
+    state: enabled
+    immediate: yes
+
+- name: Deploy Docker container with port mapping
+  ansible.builtin.docker_container:
+    name: docker_lab_mapped
+    image: docker_lab
+    state: started
+    detach: yes
+    ports:
+      - "5005:5000"
+
+- name: Create Apache virtual host for container proxy
+  ansible.builtin.template:
+    src: templates/container_proxy_vhost.j2
+    dest: /etc/httpd/conf.d/container_proxy.conf
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Restart Apache web server
+  ansible.builtin.service:
+    name: httpd
+    state: restarted
+

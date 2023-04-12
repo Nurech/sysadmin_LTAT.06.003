@@ -1,0 +1,11 @@
+<VirtualHost *:80>
+    ServerName container-proxy.{{ hostname }}.{{ domain_name }}
+    ErrorLog /var/log/httpd/container-proxy-error_log
+    CustomLog /var/log/httpd/container-proxy-access_log common
+    ForensicLog /var/log/httpd/container-proxy-forensic_log
+
+    ProxyPreserveHost On
+
+    ProxyPass / http://{{ docker_lab_ip.stdout }}:5000/
+    ProxyPassReverse / http://{{ docker_lab_ip.stdout }}:5000/
+</VirtualHost>
