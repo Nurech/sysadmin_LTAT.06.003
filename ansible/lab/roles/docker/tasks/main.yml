@@ -103,6 +103,22 @@
 
 # docker container stuff
 
+- name: Add ports to firewalld
+  firewalld:
+    zone: public
+    port: "{{ item }}"
+    state: enabled
+    immediate: true
+    permanent: true
+  loop:
+    - 5000/tcp
+    - 5005/tcp
+
+- name: Reload service firewalld
+  systemd:
+    name: firewalld
+    state: reloaded
+
 - name: Ensure server.py is present
   ansible.builtin.copy:
     src: templates/server.py
@@ -179,12 +195,9 @@
       - "5005:5000"
 
 - name: Create Apache virtual host for container proxy
-  ansible.builtin.template:
+  template:
     src: templates/container_proxy_vhost.j2
     dest: /etc/httpd/conf.d/container_proxy.conf
-    owner: root
-    group: root
-    mode: '0644'
 
 - name: Restart Apache web server
   ansible.builtin.service:

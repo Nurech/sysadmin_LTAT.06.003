@@ -97,3 +97,20 @@
   systemd:
     name: firewalld
     state: reloaded
+
+- name: Create zone file
+  template:
+    src: templates/zone.j2
+    dest: /etc/named/{{ hostname }}.{{ domain_name }}
+
+- name: Check local zone file is valid
+  become: true
+  command: named-checkzone {{ hostname }}.{{ domain_name }} /etc/named/{{ hostname }}.{{ domain_name }}
+  register: result
+- debug:
+    var: result.stdout_lines
+
+- name: Restart service named
+  service:
+    name: named
+    state: restarted
