@@ -1,0 +1,170 @@
+#- name: Install Dive and ensure it is in PATH (RHEL/CentOS)
+#  block:
+#    - name: Download Dive .rpm package
+#      ansible.builtin.get_url:
+#        url: https://github.com/wagoodman/dive/releases/download/v0.9.2/dive_0.9.2_linux_amd64.rpm
+#        dest: /tmp/dive_0.9.2_linux_amd64.rpm
+#
+#    - name: Install Dive
+#      ansible.builtin.yum:
+#        name: /tmp/dive_0.9.2_linux_amd64.rpm
+#        state: present
+#
+#    - name: Locate Dive binary
+#      ansible.builtin.command:
+#        cmd: "find / -type f -name 'dive' -executable 2>/dev/null"
+#      register: dive_binary_path
+#      changed_when: false
+#      when: "'CentOS' in ansible_distribution or 'RedHat' in ansible_distribution"
+#      become: yes
+#
+#
+#    - name: Create symlink for Dive in /usr/local/bin
+#      ansible.builtin.file:
+#        src: "{{ dive_binary_path.stdout }}"
+#        dest: /usr/local/bin/dive
+#        state: link
+#  when: "'CentOS' in ansible_distribution or 'RedHat' in ansible_distribution"
+#  become: yes
+#
+#- name: Run Dive to inspect Docker image
+#  ansible.builtin.command:
+#    cmd: "dive docker_lab"
+#  register: dive_output
+#  ignore_errors: yes
+#
+#- name: Display Dive output
+#  ansible.builtin.debug:
+#    msg: "{{ dive_output.stdout }}"
+#
+#
+#- name: Create Docker network with custom subnet
+#  ansible.builtin.docker_network:
+#    name: test
+#    ipam_config:
+#      - subnet: 192.168.150.0/24
+#    state: present
+#
+#- name: Run whoami container
+#  ansible.builtin.docker_container:
+#    name: whoami
+#    image: "registry.hpc.ut.ee/mirror/containous/whoami"
+#    state: started
+#    networks:
+#      - name: test
+#
+#- name: Run custom container
+#  ansible.builtin.docker_container:
+#    name: ecstatic_dewdney
+#    image: "registry.hpc.ut.ee/mirror/containous/whoami"
+#    state: started
+#    networks:
+#      - name: test
+#
+#- name: Check network interfaces in custom container
+#  ansible.builtin.command:
+#    cmd: "docker exec ecstatic_dewdney ip addr"
+#  register: interfaces_output
+#
+#- name: Display network interfaces in custom container
+#  ansible.builtin.debug:
+#    msg: "{{ interfaces_output.stdout }}"
+#
+#- name: Ping whoami container from custom container
+#  ansible.builtin.command:
+#    cmd: "docker exec ecstatic_dewdney ping -c 4 whoami"
+#  register: ping_output
+#
+#- name: Display ping results
+#  ansible.builtin.debug:
+#    msg: "{{ ping_output.stdout }}"
+#
+#
+#---
+#- name: Install Python 3 and pip
+#  block:
+#    - name: Install Python 3
+#      package:
+#        name: python3
+#        state: present
+#
+#    - name: Install pip
+#      package:
+#        name: python3-pip
+#        state: present
+#
+#    - name: Check if pip is in PATH
+#      command: which pip
+#      register: pip_path_check
+#      ignore_errors: true
+#
+#    - name: Get pip installation path
+#      command:  yum reinstall python3-pip -y
+#      register: pip_install_path
+#
+#
+- name: Add ports to firewalld
+  firewalld:
+    zone: public
+    port: "{{ item }}"
+    state: enabled
+    immediate: true
+    permanent: true
+  loop:
+    - 50080/tcp
+    - 58080/tcp
+
+- name: Reload service firewalld
+  systemd:
+    name: firewalld
+    state: reloaded
+
+- name: Ensure /etc/docker directory exists
+  ansible.builtin.file:
+    path: /etc/docker
+    state: directory
+    mode: '0755'
+
+- name: Create /etc/docker/daemon.json
+  template:
+    src: templates/daemon.json
+    dest: /etc/docker/daemon.json
+
+- name: Traefik stuff
+  block:
+    - name: Create Traefik configuration directory
+      ansible.builtin.file:
+        path: /etc/traefik
+        state: directory
+
+    - name: Copy Traefik configuration file
+      template:
+        src: templates/traefik.j2
+        dest: /etc/traefik/traefik.toml
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Install Pip packages
+      pip:
+        name:
+          - docker-compose
+        executable: pip
+        state: present
+        extra_args: --ignore-installed
+
+    - name: Create Docker Compose file
+      template:
+        src: templates/docker-compose.j2
+        dest: /root/docker-compose.yml
+
+    - name: Remove existing Traefik container if it exists
+      ansible.builtin.docker_container:
+        name: traefik
+        state: absent
+
+    - name: Run Docker Compose deployment
+      ansible.builtin.docker_compose:
+        project_src: /root
+        state: present
+
