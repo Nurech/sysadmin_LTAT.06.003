@@ -1,0 +1,167 @@
+- name: Prepare and install k3s with custom traefik configuration
+  block:
+
+    - name: ensures /var/lib/rancher/k3s/server/manifests dir exists
+      file:
+        path: "/var/lib/rancher/k3s/server/manifests"
+        state: directory
+
+    - name: Copy file
+      template:
+        src: templates/traefik-config.yaml.j2
+        dest: "/var/lib/rancher/k3s/server/manifests/traefik-config.yaml.j2"
+
+    - name: Install k3s
+      ansible.builtin.shell: curl -sfL https://get.k3s.io | sh -
+
+    - name: Ensure k3s systemd service is started and enabled
+      ansible.builtin.systemd:
+        name: k3s
+        state: started
+        enabled: yes
+
+    - name: Open ports 6443/tcp and 10250/tcp
+      ansible.builtin.firewalld:
+        port: "{{ item }}"
+        permanent: yes
+        state: enabled
+      loop:
+        - 6443/tcp
+        - 10250/tcp
+
+    - name: Restart service firewalld
+      systemd:
+        name: firewalld
+        state: reloaded
+
+---
+- name: Create NFS directories
+  block:
+    - name: Create /shares/k8s directory
+      ansible.builtin.file:
+        path: /shares/k8s
+        state: directory
+        mode: '0777'
+
+    - name: Create /mnt/k8s directory
+      ansible.builtin.file:
+        path: /mnt/k8s
+        state: directory
+        mode: '0777'
+
+    - name: Add NFS export to /etc/exports
+      ansible.builtin.lineinfile:
+        path: /etc/exports
+        line: '/shares/k8s *(rw,sync,no_root_squash)'
+
+    - name: Restart NFS server
+      ansible.builtin.systemd:
+        name: nfs-server
+        state: restarted
+
+    - name: Create hello.txt in the mounted directory
+      ansible.builtin.copy:
+        content: "Hello, world!"
+        dest: /mnt/k8s/hello.txt
+
+- name: Deploy a simple stateless Nginx Pod
+  template:
+    src: templates/simple.yaml.j2
+    dest: "/tmp/simple.yaml"
+
+- name: Deploy Bucket Pod
+  template:
+    src: templates/bucket-pod.yaml.j2
+    dest: "/tmp/bucket-pod.yaml"
+
+- name: Create hello YAML file for namespace and pod
+  template:
+    src: templates/hello.yaml.j2
+    dest: "/tmp/hello.yaml"
+
+- name: Create lab11 namespace manifest
+  template:
+    src: templates/lab11-namespace.yaml.j2
+    dest: "/tmp/lab11-namespace.yaml"
+
+- name: Create helloworld deployment manifest
+  template:
+    src: templates/helloworld-deployment.yaml.j2
+    dest: "/tmp/helloworld-deployment.yaml"
+
+- name: Create resource-mgt namespace and glutton deployment manifests
+  template:
+    src: templates/resource-mgt-namespace.yaml.j2
+    dest: "/tmp/resource-mgt-namespace.yaml"
+
+- name: Create glutton deployment manifest
+  template:
+    src: templates/glutton-deployment.yaml.j2
+    dest: "/tmp/glutton-deployment.yaml"
+
+- name: Create manifests for ConfigMap, PVC, and deployment
+  template:
+    src: templates/vols-namespace.yaml.j2
+    dest: "/tmp/vols-namespace.yaml"
+
+- name: Create veggies ConfigMap manifest
+  template:
+    src: templates/veggies-configmap.yaml.j2
+    dest: "/tmp/veggies-configmap.yaml"
+
+
+- name: Create laptop ConfigMap manifest
+  template:
+    src: templates/laptop-configmap.yaml.j2
+    dest: "/tmp/laptop-configmap.yaml"
+
+- name: Create laptop pod
+  template:
+    src: templates/laptop-pod.yaml.j2
+    dest: "/tmp/laptop-pod.yaml"
+
+- name: Create pvol.yaml from template
+  template:
+    src: templates/pvol.yaml.j2
+    dest: "/tmp/pvol.yaml"
+
+- name: Create pvc.yaml from template
+  template:
+    src: templates/pvc.yaml.j2
+    dest: "/tmp/pvc.yaml"
+
+- name: Create deployment manifest
+  template:
+    src: templates/deployment.yaml.j2
+    dest: "/tmp/deployment.yaml"
+
+- name: Create manifests for Service
+  template:
+    src: templates/service.yaml.j2
+    dest: "/tmp/service.yaml"
+
+- name: Create Ingress file
+  template:
+    src: templates/ingress.yaml.j2
+    dest: "/tmp/ingress.yaml"
+
+
+#  kubectl create -f /tmp/simple.yaml
+#  kubectl apply -f /tmp/hello.yaml
+#  kubectl apply -f /tmp/lab11-namespace.yaml
+#  kubectl apply -f /tmp/helloworld-deployment.yaml
+#  kubectl scale deployment helloworld --replicas=3 -n lab11
+#  kubectl apply -f /tmp/vols-namespace.yaml
+#  kubectl apply -f /tmp/veggies-configmap.yaml
+#  kubectl create -f /tmp/bucket-pod.yaml
+#  kubectl create -f /tmp/laptop-pod.yaml
+#  kubectl apply -f /tmp/laptop-configmap.yaml
+#  kubectl apply -f /tmp/volume-pod.yaml
+#  kubectl apply -f /tmp/pvol.yaml
+#  kubectl apply -f /tmp/pvc.yaml
+#  kubectl apply -f /tmp/deployment.yaml
+#  kubectl apply -f /tmp/ingress.yaml
+#  kubectl create -f /tmp/glutton-deployment.yaml
+#
+#
+#  kubectl delete daemonsets,replicasets,pv,pvc,services,deployments,pods,rc,ingress --all --all-namespaces

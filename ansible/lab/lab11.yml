@@ -12,4 +12,6 @@
 #    - { role: email, tags: email}
 #    - { role: tls, tags: tls}
 #    - { role: fs, tags: fs}
-    - { role: docker, tags: docker}
+#    - { role: docker, tags: docker}
+#    - { role: devops, tags: devops}
+    - { role: kubernetes, tags: kubernetes}

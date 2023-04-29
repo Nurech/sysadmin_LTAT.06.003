@@ -19,3 +19,6 @@ domain_name: "sa.cs.ut.ee"
 machine_name: "{{ hostname }}.{{ domain_name }}"
 whoami_port: 50080
 traefik_dashboard_port: 8080
+
+interpreter_python: /bin/python3
+ansible_python_interpreter: /bin/python3
