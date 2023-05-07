@@ -1,51 +1,51 @@
-#---
-#
-#- name: Add ports to firewalld
-#  firewalld:
-#    zone: public
-#    port: "{{ item }}"
-#    state: enabled
-#    immediate: true
-#    permanent: true
-#  loop:
-#    - 514/tcp
-#    - 3101/tcp
-#    - 30910/tcp
-#    - 30909/tcp
-#    - 30000/tcp
-#    - 30310/tcp
-#    - 10250/tcp
-#    - 3100/tcp
-#    - 10001/tcp
-#    - 3100/tcp
-#    - 9100/tcp
-#    - 9090/tcp
-#    - 10001/tcp
-#
-#
-#- name: Configure rsyslog to receive logs on a port
-#  block:
-#    - name: Backup original rsyslog configuration
-#      ansible.builtin.copy:
-#        src: /etc/rsyslog.conf
-#        dest: /etc/rsyslog.conf.bak
-#        remote_src: yes
-#
-#    - name: Configure rsyslog to listen on port 514
-#      ansible.builtin.template:
-#        src: templates/rsyslog.conf.j2
-#        dest: /etc/rsyslog.conf
-#
-#    - name: Create a configuration file for receiving the logs
-#      ansible.builtin.template:
-#        src: templates/01-receiving.conf.j2
-#        dest: /etc/rsyslog.d/01-receiving.conf
-#
-#    - name: Restart rsyslog service
-#      ansible.builtin.systemd:
-#        name: rsyslog
-#        state: restarted
-#
+---
+
+- name: Add ports to firewalld
+  firewalld:
+    zone: public
+    port: "{{ item }}"
+    state: enabled
+    immediate: true
+    permanent: true
+  loop:
+    - 514/tcp
+    - 3101/tcp
+    - 30910/tcp
+    - 30909/tcp
+    - 30000/tcp
+    - 30310/tcp
+    - 10250/tcp
+    - 3100/tcp
+    - 10001/tcp
+    - 3100/tcp
+    - 9100/tcp
+    - 9090/tcp
+    - 10001/tcp
+
+
+- name: Configure rsyslog to receive logs on a port
+  block:
+    - name: Backup original rsyslog configuration
+      ansible.builtin.copy:
+        src: /etc/rsyslog.conf
+        dest: /etc/rsyslog.conf.bak
+        remote_src: yes
+
+    - name: Configure rsyslog to listen on port 514
+      ansible.builtin.template:
+        src: templates/rsyslog.conf.j2
+        dest: /etc/rsyslog.conf
+
+    - name: Create a configuration file for receiving the logs
+      ansible.builtin.template:
+        src: templates/01-receiving.conf.j2
+        dest: /etc/rsyslog.d/01-receiving.conf
+
+    - name: Restart rsyslog service
+      ansible.builtin.systemd:
+        name: rsyslog
+        state: restarted
+
 
 #  kubectl apply -f https://raw.githubusercontent.com/rancher/local-path-provisioner/v0.0.24/deploy/local-path-storage.yaml
 #  kubectl create ns prometheus
@@ -60,21 +60,21 @@
 #  kubectl apply -f /tmp/loki_setup.yaml
 #  kubectl apply -f /tmp/loki_service.yaml
 #  kubectl apply -f /tmp/promtail_setup.yaml
-
+#
 #  kubectl delete daemonsets,replicasets,statefulsets,pv,pvc,services,deployments,pods,rc,ingress,configmaps,namespaces --all --all-namespaces
 
-#- name: Create necessary directories
-#  file:
-#    path: "{{ item }}"
-#    state: directory
-#    mode: '0755'
-#  loop:
-#    - /etc/loki
-#    - /data/loki
-#    - /etc/promtail
-#    - /var/log
-#    - /var/lib/docker/containers
-#    - /var/log/containers
+- name: Create necessary directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - /etc/loki
+    - /data/loki
+    - /etc/promtail
+    - /var/log
+    - /var/lib/docker/containers
+    - /var/log/containers
 
 - name: copy templates
   template:
