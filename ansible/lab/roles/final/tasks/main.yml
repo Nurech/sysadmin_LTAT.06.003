@@ -1,0 +1,14 @@
+- name: Create /etc/identity file
+  ansible.builtin.copy:
+    content: |
+      Full name: {{ your_full_name }}
+      VM name: {{ your_VM_name }}
+      Matrix number: {{ your_matrix_number }}
+      Email address: {{ your_email_address }}
+      {% if your_used_uuid is defined %}
+      UUID: {{ your_used_uuid }}
+      {% endif %}
+    dest: /etc/identity
+    owner: root
+    group: root
+    mode: '0644'

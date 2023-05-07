@@ -22,3 +22,8 @@ traefik_dashboard_port: 8080
 
 interpreter_python: /bin/python3
 ansible_python_interpreter: /bin/python3
+
+your_full_name: "Joosep Parts"
+your_VM_name: "C29890"
+your_matrix_number: "C29890"
+your_email_address: "jopart@ttu.ee"

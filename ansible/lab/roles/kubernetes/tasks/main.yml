@@ -34,7 +34,6 @@
         name: firewalld
         state: reloaded
 
----
 - name: Create NFS directories
   block:
     - name: Create /shares/k8s directory
@@ -146,6 +145,7 @@
     dest: "/tmp/ingress.yaml"
 
 
+#  kubectl create ns resource-mgt
 #  kubectl create -f /tmp/simple.yaml
 #  kubectl apply -f /tmp/hello.yaml
 #  kubectl apply -f /tmp/lab11-namespace.yaml
