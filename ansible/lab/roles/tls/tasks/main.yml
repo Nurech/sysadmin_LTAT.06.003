@@ -7,6 +7,16 @@
     - /etc/pki/tls/certs
     - /etc/pki/tls/private
 
+- name: Add ports to firewalld
+  firewalld:
+    zone: public
+    port: "{{ item }}"
+    state: enabled
+    immediate: true
+    permanent: true
+  loop:
+    - 993/tcp
+
 - name: Read cert_data file
   set_fact:
     cert_data: "{{ lookup('file', '../templates/cert_data') | from_json }}"

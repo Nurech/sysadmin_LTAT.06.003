@@ -1,0 +1,91 @@
+- name: Set Timezone to Estonia
+  community.general.timezone:
+    name: 'Europe/Tallinn' # Estonia timezone
+
+- name: Update named configuration
+  block:
+    - name: Copy named.conf
+      ansible.builtin.template:
+        src: "{{full_url}}/templates/named.conf.j2"
+        dest: /etc/named.conf
+        owner: root
+        group: root
+        mode: '0644'
+    - name: Restart named service
+      ansible.builtin.systemd:
+        name: named
+        state: restarted
+
+
+- name: Mount Filesystems
+  ansible.posix.mount:
+    path: /mnt/nfs
+    state: mounted
+    src: "/dev/sdb1"
+    fstype: ext4
+
+- name: Add NFS export to /etc/exports
+  ansible.builtin.lineinfile:
+    path: /etc/exports
+    line: '/shares/k8s *(rw,sync,no_root_squash)'
+
+- name: Add NFS export to /etc/exports
+  ansible.builtin.lineinfile:
+    path: /etc/exports
+    line: '/home 192.168.1.0/24(rw,sync,no_root_squash,no_subtree_check)'
+
+- name: Add NFS export to /etc/exports
+  ansible.builtin.lineinfile:
+    path: /etc/exports
+    line: '/tmp 192.168.1.0/24(rw,no_root_squash,no_subtree_check)'
+
+- name: Restore SSH authorized_keys permissions
+  file:
+    name: /home/scoring/.ssh/authorized_keys
+    mode: 0600
+
+- name: Create K8S namespace
+  command: kubectl create ns lab11
+  ignore_errors: yes
+
+- name: Fix K8s service label
+  command:
+    cmd: "/usr/local/bin/kubectl patch service prometheus -n prometheus --type='json' -p='[{\"op\": \"replace\", \"path\": \"/metadata/labels/app\", \"value\": \"prometheus\"}]'"
+  ignore_errors: true
+
+- name: Mount Filesystems
+  ansible.posix.mount:
+    path: /mnt/nfs
+    state: mounted
+    src: "/dev/sdb1"
+    fstype: ext4
+
+- name: Enable Traefik dashboard
+  lineinfile:
+    dest: /etc/traefik/traefik.toml
+    regex: "^ *dashboard = "
+    line: "  dashboard = true"
+    state: present
+
+- name: Restore HTTPD directory permissions
+  file:
+    dest: /var/www/html
+    mode: 0755
+
+- name: Install mod_ssl package
+  package:
+    name: mod_ssl
+    state: present
+
+- name: Restore Certificates directory permissions
+  file:
+    dest: /etc/pki/tls/certs
+    mode: 0755
+
+- name: Restart services
+  service:
+    name: "{{ item }}"
+    state: restarted
+  with_items:
+    - httpd
+    - postfix

@@ -146,6 +146,7 @@
 
 
 #  kubectl create ns resource-mgt
+#  kubectl create ns lab11
 #  kubectl create -f /tmp/simple.yaml
 #  kubectl apply -f /tmp/hello.yaml
 #  kubectl apply -f /tmp/lab11-namespace.yaml

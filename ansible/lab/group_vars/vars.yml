@@ -13,6 +13,7 @@ consul_pass: password
 docker_repo_url: https://download.docker.com/linux/centos/docker-ce.repo
 docker_dir: /etc/docker
 flask_app_dir: /opt/flask_app
+full_url: /mnt/c/Users/partsjoo/IdeaProjects/sysadmin_LTAT.06.003/ansible/lab/roles/exam/
 
 hostname: "C29890"
 domain_name: "sa.cs.ut.ee"

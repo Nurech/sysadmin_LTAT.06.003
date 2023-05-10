@@ -11,13 +11,12 @@
         state: present
 
     - name: Locate Dive binary
-      ansible.builtin.command:
+      ansible.builtin.shell:
         cmd: "find / -type f -name 'dive' -executable 2>/dev/null"
       register: dive_binary_path
       changed_when: false
       when: "'CentOS' in ansible_distribution or 'RedHat' in ansible_distribution"
       become: yes
-
 
     - name: Create symlink for Dive in /usr/local/bin
       ansible.builtin.file:
@@ -26,6 +25,7 @@
         state: link
   when: "'CentOS' in ansible_distribution or 'RedHat' in ansible_distribution"
   become: yes
+  ignore_errors: true
 
 - name: Run Dive to inspect Docker image
   ansible.builtin.command:
@@ -62,25 +62,34 @@
       - name: test
 
 - name: Check network interfaces in custom container
-  ansible.builtin.command:
-    cmd: "docker exec ecstatic_dewdney ip addr"
-  register: interfaces_output
+  ansible.builtin.docker_container_info:
+    name: ecstatic_dewdney
+  register: container_info
 
 - name: Display network interfaces in custom container
   ansible.builtin.debug:
-    msg: "{{ interfaces_output.stdout }}"
+    msg: "{{ container_info.container.NetworkSettings.Networks }}"
+
+- name: Install the ping command in the custom container
+  ansible.builtin.docker_container:
+    name: ecstatic_dewdney
+    image: "registry.hpc.ut.ee/mirror/containous/whoami"
+    command: "apt-get update && apt-get install -y inetutils-ping"
+    state: started
 
 - name: Ping whoami container from custom container
-  ansible.builtin.command:
+  ansible.builtin.shell:
     cmd: "docker exec ecstatic_dewdney ping -c 4 whoami"
   register: ping_output
+  ignore_errors: true
 
 - name: Display ping results
   ansible.builtin.debug:
     msg: "{{ ping_output.stdout }}"
+  ignore_errors: true
 
 
----
+
 - name: Install Python 3 and pip
   block:
     - name: Install Python 3

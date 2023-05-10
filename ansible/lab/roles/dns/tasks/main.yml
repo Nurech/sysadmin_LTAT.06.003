@@ -49,26 +49,26 @@
     state: latest
     update_cache: yes
 
-- name: 2. Reboot the server
-  tags: reboot
-  become: yes
-  become_user: root
-  shell: "sleep 2 && reboot"
-  async: 1
-  poll: 0
-
-- name: 2. Wait for the reboot to complete
-  wait_for_connection:
-    connect_timeout: 120
-    sleep: 5
-    delay: 10
-    timeout: 300
-
-- name: 2. Wait for server to be back up
-  shell: "uptime"
-  register: Uptime
-
-- debug: var=Uptime
+#- name: 2. Reboot the server
+#  tags: reboot
+#  become: yes
+#  become_user: root
+#  shell: "sleep 2 && reboot"
+#  async: 1
+#  poll: 0
+#
+#- name: 2. Wait for the reboot to complete
+#  wait_for_connection:
+#    connect_timeout: 120
+#    sleep: 5
+#    delay: 10
+#    timeout: 300
+#
+#- name: 2. Wait for server to be back up
+#  shell: "uptime"
+#  register: Uptime
+#
+#- debug: var=Uptime
 #
 - name: 2. dnf autoremove -y
   ansible.builtin.raw: dnf autoremove -y

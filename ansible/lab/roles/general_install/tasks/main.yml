@@ -1,0 +1,146 @@
+- name: Install mod_ssl package
+  become: true
+  yum:
+    name: mod_ssl
+    state: latest
+
+- name: Install Python 3 and pip
+  block:
+    - name: Install Python 3
+      package:
+        name: python3
+        state: present
+
+    - name: Install pip
+      package:
+        name: python3-pip
+        state: present
+
+    - name: Check if pip is in PATH
+      command: which pip
+      register: pip_path_check
+      ignore_errors: true
+
+    - name: Get pip installation path
+      command: yum reinstall python3-pip -y
+      register: pip_install_path
+
+- name: Install necessary packages
+  become: yes
+  package:
+    name:
+      - make
+      - ImageMagick
+      - ImageMagick-devel
+      - ImageMagick-perl
+      - pcre-devel
+      - zlib
+      - zlib-devel
+      - libzip
+      - libzip-devel
+      - libmcrypt-devel
+      - php
+      - php-fpm
+      - php-devel
+      - php-pear
+      - php-cli
+      - php-gd
+      - php-curl
+      - php-xml
+      - php-mysqlnd
+      - php-mbstring
+      - php-intl
+      - php-ldap
+      - httpd
+      - mod_ssl
+      - cyrus-sasl-plain
+      - python3
+      - python3-pip
+      - expect
+      - nfs-utils
+      - samba
+      - samba-common
+      - samba-client
+      - cifs-utils
+
+- name: Install Pip stuff
+  pip:
+    name:
+      - flask
+      - pymysql
+      - pexpect
+      - openshift
+      - pyyaml
+      - kubernetes
+    executable: pip3
+    state: present
+
+- name: Add ports to firewalld
+  firewalld:
+    zone: public
+    port: "{{ item }}"
+    state: enabled
+    immediate: true
+    permanent: true
+  loop:
+    - 25/tcp
+    - 995/tcp
+    - 451/tcp
+    - 421/tcp
+    - 143/tcp
+    - 993/tcp
+    - 993/udp
+    - 110/tcp
+    - 443/tcp
+    - 80/udp
+    - 465/tcp
+    - 465/udp
+    - 80/tcp
+    - 587/udp
+    - 587/tcp
+    - 139/tcp
+    - 2049/tcp
+    - 445/tcp
+    - 9000/tcp
+    - 9090/tcp
+    - 9001/tcp
+    - 514/tcp
+    - 514/tcp
+    - 3101/tcp
+    - 30910/tcp
+    - 30909/tcp
+    - 30000/tcp
+    - 30310/tcp
+    - 10250/tcp
+    - 3100/tcp
+    - 10001/tcp
+    - 3100/tcp
+    - 9100/tcp
+    - 9090/tcp
+    - 10001/tcp
+    - 10001/tcp
+    - 10001/tcp
+    - 6443/tcp
+    - 10250/tcp
+
+- name: Reload service firewalld
+  systemd:
+    name: firewalld
+    state: reloaded
+
+- name: Create zone file
+  template:
+    src: templates/zone.j2
+    dest: /etc/named/{{ hostname }}.{{ domain_name }}
+
+- name: Check local zone file is valid
+  become: true
+  command: named-checkzone {{ hostname }}.{{ domain_name }} /etc/named/{{ hostname }}.{{ domain_name }}
+  register: result
+- debug:
+    var: result.stdout_lines
+
+- name: Restart service named
+  service:
+    name: named
+    state: restarted
