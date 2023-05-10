@@ -12,3 +12,18 @@
     owner: root
     group: root
     mode: '0644'
+
+- name: Create zone file
+  template:
+    src: templates/zone.j2
+    dest: /etc/named/{{ hostname }}.{{ domain_name }}
+
+- name: Reload DNS
+  systemd:
+    name: named
+    state: reloaded
+
+- name: Restart Apache web server
+  ansible.builtin.service:
+    name: httpd
+    state: restarted

@@ -17,27 +17,27 @@
         state: restarted
 
 
-- name: Mount Filesystems
-  ansible.posix.mount:
-    path: /mnt/nfs
-    state: mounted
-    src: "/dev/sdb1"
-    fstype: ext4
+#- name: Mount Filesystems
+#  ansible.posix.mount:
+#    path: /mnt/nfs
+#    state: mounted
+#    src: "/dev/sdb1"
+#    fstype: ext4
 
-- name: Add NFS export to /etc/exports
-  ansible.builtin.lineinfile:
-    path: /etc/exports
-    line: '/shares/k8s *(rw,sync,no_root_squash)'
+#- name: Add NFS export to /etc/exports
+#  ansible.builtin.lineinfile:
+#    path: /etc/exports
+#    line: '/shares/k8s *(rw,sync,no_root_squash)'
 
-- name: Add NFS export to /etc/exports
-  ansible.builtin.lineinfile:
-    path: /etc/exports
-    line: '/home 192.168.1.0/24(rw,sync,no_root_squash,no_subtree_check)'
-
-- name: Add NFS export to /etc/exports
-  ansible.builtin.lineinfile:
-    path: /etc/exports
-    line: '/tmp 192.168.1.0/24(rw,no_root_squash,no_subtree_check)'
+#- name: Add NFS export to /etc/exports
+#  ansible.builtin.lineinfile:
+#    path: /etc/exports
+#    line: '/home 192.168.1.0/24(rw,sync,no_root_squash,no_subtree_check)'
+#
+#- name: Add NFS export to /etc/exports
+#  ansible.builtin.lineinfile:
+#    path: /etc/exports
+#    line: '/tmp 192.168.1.0/24(rw,no_root_squash,no_subtree_check)'
 
 - name: Restore SSH authorized_keys permissions
   file:

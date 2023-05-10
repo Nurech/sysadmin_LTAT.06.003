@@ -85,6 +85,8 @@
   loop:
     - 25/tcp
     - 995/tcp
+    - 5000/tcp
+    - 5005/tcp
     - 451/tcp
     - 421/tcp
     - 143/tcp
