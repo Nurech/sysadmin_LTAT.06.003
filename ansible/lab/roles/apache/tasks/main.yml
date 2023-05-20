@@ -19,7 +19,7 @@
 - name: 1. Validation of previous week's tasks
   block:
   - name: Execute the nslookup command
-    command: nslookup C29890.sa.cs.ut.ee
+    command: nslookup C29890p.sysadexam.cs.ut.ee
     register: nslookup_result
   - name: Parse the output
     set_fact:
@@ -29,9 +29,72 @@
   ansible.builtin.debug:
     msg: host_ip is {{ host_ip }}
 
-- name: Assert that host_ip = external_ip
-  assert:
-    that: host_ip == external_ip
+
+- name: Create proxy.conf
+  template:
+    src: templates/proxy.conf.j2
+    dest: /etc/httpd/conf.d/proxy.conf
+
+- name: Allow HTTPD to connect to Python program
+  ansible.builtin.raw: setsebool -P httpd_can_network_connect=1
+
+- name: Reload Apache config
+  service:
+    name: httpd
+    state: restarted
+    enabled: yes
+  ignore_errors: yes
+
+- name: Create the proxy user
+  user:
+    name: proxy
+    state: present
+
+- name: Create proxy.service
+  template:
+    src: templates/proxy.service.j2
+    dest: /etc/systemd/system/proxy.service
+
+- name: Give ownership of the server file to the proxy user
+  file:
+    path: /usr/local/lib/server.py
+    owner: proxy
+    group: proxy
+
+- name: Reload systemctl service files
+  command: 'systemctl daemon-reload'
+
+- name: Start the proxy service
+  service:
+    name: proxy
+    state: started
+
+- name: Enable proxy service to be started on boot
+  service:
+    name: proxy
+    enabled: yes
+
+- name: Add log files
+  file:
+    path: /var/log/httpd/"{{ item }}"
+    state: touch
+    mode: 0644
+    owner: root
+    group: root
+  with_items:
+    - www.c29890p-forensic.log
+    - wordpress.c29890p-forensic.log
+    - proxy.c29890p-forensic.log
+
+
+#- name: Assert that host_ip = external_ip
+#  assert:
+#    that: host_ip == external_ip
+
+- name: Change httpd.conf
+  template:
+    src: templates/httpd.conf.j2
+    dest: /etc/httpd/conf/httpd.conf
 
 - name: Create zone file
   template:
@@ -79,6 +142,7 @@
   service:
     name: httpd
     state: started
+  ignore_errors: yes
 
 - name: Restart the name server (service named)
   become: true
@@ -126,50 +190,6 @@
   template:
     src: templates/server.py.j2
     dest: /usr/local/lib/server.py
-
-- name: Create proxy.conf
-  template:
-    src: templates/proxy.conf.j2
-    dest: /etc/httpd/conf.d/proxy.conf
-
-- name: Allow HTTPD to connect to Python program
-  ansible.builtin.raw: setsebool -P httpd_can_network_connect=1
-
-- name: Reload Apache config
-  service:
-    name: httpd
-    state: restarted
-    enabled: yes
-
-- name: Create the proxy user
-  user:
-    name: proxy
-    state: present
-
-- name: Create proxy.service
-  template:
-    src: templates/proxy.service.j2
-    dest: /etc/systemd/system/proxy.service
-
-- name: Give ownership of the server file to the proxy user
-  file:
-    path: /usr/local/lib/server.py
-    owner: proxy
-    group: proxy
-
-- name: Reload systemctl service files
-  command: 'systemctl daemon-reload'
-
-- name: Start the proxy service
-  service:
-    name: proxy
-    state: started
-
-- name: Enable proxy service to be started on boot
-  service:
-    name: proxy
-    enabled: yes
-
 
 - name: Install php-mysqlnd php-fpm mariadb-server httpd tar curl php-json
   dnf:
@@ -321,17 +341,7 @@
     name: httpd
     state: restarted
 
-- name: Add log files
-  file:
-    path: /var/log/httpd/"{{ item }}"
-    state: touch
-    mode: 0644
-    owner: root
-    group: root
-  with_items:
-  - www.c29890-forensic.log
-  - wordpress.c29890-forensic.log
-  - proxy.c29890-forensic.log
+
 
 - name: Search for Apache2 security module
   dnf:

@@ -14,4 +14,4 @@ UUID=2cb88052-1071-4095-9a04-826da44cfb13 /boot                   xfs     defaul
 localhost:/shares/nfs /mnt/nfs nfs defaults 0 0
 LABEL=lab8FSext4 /lab8/fs-ext4 ext4 defaults 0 0
 LABEL=lab8FSxfs /lab8/fs-xfs xfs defaults 0 0
-C29890.sa.cs.ut.ee:/shares/k8s /mnt/k8s nfs defaults 0 0
+C29890p.sa.cs.ut.ee:/shares/k8s /mnt/k8s nfs defaults 0 0

@@ -181,6 +181,13 @@
     state: enabled
     immediate: yes
 
+- name: Open port 5005/tcp in firewalld
+  ansible.posix.firewalld:
+    port: 5000/tcp
+    permanent: yes
+    state: enabled
+    immediate: yes
+
 - name: Deploy Docker container with port mapping
   ansible.builtin.docker_container:
     name: docker_lab_mapped

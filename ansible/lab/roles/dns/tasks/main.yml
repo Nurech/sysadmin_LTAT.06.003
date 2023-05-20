@@ -35,12 +35,12 @@
     name: sshd
     state: restarted
 
-##2. Check for the updates using CentOS package manager
-#- name: 2. dnf check-update -y
-#  ansible.builtin.raw: sudo dnf check-update -y
-#
-#- name: 2. sudo dnf update -y
-#  ansible.builtin.raw: sudo dnf update -y
+#2. Check for the updates using CentOS package manager
+- name: 2. dnf check-update -y
+  ansible.builtin.raw: sudo dnf check-update -y
+
+- name: 2. sudo dnf update -y
+  ansible.builtin.raw: sudo dnf update -y
 
 
 - name: Check for updates
@@ -146,14 +146,14 @@
     group: root
     mode: 0777
 
-#6 Configuring the BIND Name Server
-- name: 6. Install bind and bind-utils on CentOS
-  yum:
-    name:
-      - bind
-      - bind-utils
-    state: present
-  become: true
+##6 Configuring the BIND Name Server
+#- name: 6. Install bind and bind-utils on CentOS
+#  yum:
+#    name:
+#      - bind
+#      - bind-utils
+#    state: present
+#  become: true
 
 
 - name: 6. Create log directory

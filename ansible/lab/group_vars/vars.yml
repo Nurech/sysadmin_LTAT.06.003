@@ -15,8 +15,8 @@ docker_dir: /etc/docker
 flask_app_dir: /opt/flask_app
 full_url: /mnt/c/Users/partsjoo/IdeaProjects/sysadmin_LTAT.06.003/ansible/lab/roles/exam/
 
-hostname: "C29890"
-domain_name: "sa.cs.ut.ee"
+hostname: "C29890p"
+domain_name: "sysadexam.cs.ut.ee"
 machine_name: "{{ hostname }}.{{ domain_name }}"
 whoami_port: 50080
 traefik_dashboard_port: 8080
@@ -25,6 +25,6 @@ interpreter_python: /bin/python3
 ansible_python_interpreter: /bin/python3
 
 your_full_name: "Joosep Parts"
-your_VM_name: "C29890"
-your_matrix_number: "C29890"
+your_VM_name: "C29890p"
+your_matrix_number: "C29890p"
 your_email_address: "jopart@ttu.ee"

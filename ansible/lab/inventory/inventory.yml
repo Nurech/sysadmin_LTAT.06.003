@@ -2,8 +2,5 @@ all:
   children:
     lab:
       hosts:
-        172.17.88.149
-    linux:
-      hosts:
-        192.168.172.1:
+        172.17.91.119
 

@@ -9,15 +9,16 @@ $ORIGIN {{ hostname }}.{{ domain_name }}.
       120M ; Expire
       600 ) ; Negative Cache TTL
 
-@                IN    NS          ns1
-@                IN    MX     10   mail.{{ hostname }}.{{ domain_name }}.
-@                IN    A           {{ external_ip }}
-ns1              IN    A           {{ external_ip }}
-{{ hostname }}   IN    A           {{ external_ip }}
-mail             IN    A           {{ external_ip }}
-www              IN    CNAME       {{ hostname }}.{{ domain_name }}.
-proxy            IN    CNAME       {{ hostname }}.{{ domain_name }}.
-wordpress        IN    CNAME       {{ hostname }}.{{ domain_name }}.
+@                      IN    NS          ns1
+@                      IN    MX     10   mail.{{ hostname }}.{{ domain_name }}.
+@                      IN    A           {{ external_ip }}
+ns1                    IN    A           {{ external_ip }}
+{{ hostname }}         IN    A           {{ external_ip }}
+mail                   IN    A           {{ external_ip }}
+www                    IN    CNAME       {{ hostname }}.{{ domain_name }}.
+proxy                  IN    CNAME       {{ hostname }}.{{ domain_name }}.
+wordpress              IN    CNAME       {{ hostname }}.{{ domain_name }}.
+container-proxy        IN    CNAME       {{ hostname }}.{{ domain_name }}.
 
 
 

@@ -6,14 +6,15 @@
 
   roles:
     - { role: general, tags: general}
-#    - { role: etais, tags: etais }
-#    - { role: dns, tags: dns }
-#    - { role: apache, tags: apache}
-#    - { role: email, tags: email}
-#    - { role: tls, tags: tls}
-#    - { role: fs, tags: fs}
-#    - { role: docker, tags: docker}
-#    - { role: devops, tags: devops}
+    - { role: general_install, tags: general_install}
+    - { role: etais, tags: etais }
+    - { role: dns, tags: dns }
+    - { role: apache, tags: apache}
+    - { role: email, tags: email}
+    - { role: tls, tags: tls}
+    - { role: fs, tags: fs}
+    - { role: docker, tags: docker} # Needs to be before devops because we copy daemon.json
+    - { role: devops, tags: devops}
 #    - { role: kubernetes, tags: kubernetes}
-    - { role: monitoring, tags: monitoring}
+#    - { role: monitoring, tags: monitoring}
     - { role: final, tags: final}

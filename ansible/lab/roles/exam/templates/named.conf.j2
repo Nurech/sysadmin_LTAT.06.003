@@ -108,16 +108,16 @@ logging {
 include "/etc/named.rfc1912.zones";
 include "/etc/named.root.key";
 
-zone "88.17.172.in-addr.arpa" IN {
+zone "{{ quad_3 }}.{{ quad_2 }}.{{ quad_1 }}.in-addr.arpa" IN {
         type master;
-        file "/etc/named/reverse.C29890.sa.cs.ut.ee";
+        file "/etc/named/reverse.{{ hostname }}.{{ domain_name }}";
         allow-update { none; };
 };
 // BEGIN local zone ANSIBLE MANAGED BLOCK
-zone "C29890.sa.cs.ut.ee" IN {
+zone "{{ hostname }}.{{ domain_name }}" IN {
         notify explicit;
         type master;
-        file "/etc/named/C29890.sa.cs.ut.ee";
+        file "/etc/named/{{ hostname }}.{{ domain_name }}";
         allow-update { none; };
 };
 // END local zone ANSIBLE MANAGED BLOCK

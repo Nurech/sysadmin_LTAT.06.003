@@ -12,6 +12,6 @@ $ORIGIN {{ hostname }}.{{ domain_name }}.
 @              IN      A       {{ external_ip }}
 ns1            IN      A       {{ external_ip }}
 {{ hostname }}         IN      A       {{ external_ip }}
-www IN CNAME {{ hostname }}.sa.cs.ut.ee.
-proxy IN CNAME {{ hostname }}.sa.cs.ut.ee.
-wordpress IN CNAME {{ hostname }}.sa.cs.ut.ee.
+www IN CNAME {{ hostname }}.{{ domain_name }}.
+proxy IN CNAME {{ hostname }}.{{ domain_name }}.
+wordpress IN CNAME {{ hostname }}.{{ domain_name }}.
